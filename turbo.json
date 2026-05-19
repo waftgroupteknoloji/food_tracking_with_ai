@@ -4,7 +4,18 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "MONGODB_URI",
+        "JWT_SECRET_CURRENT",
+        "JWT_SECRET_PREVIOUS",
+        "GEMINI_API_KEY",
+        "AWS_REGION",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "S3_BUCKET_NAME",
+        "S3_PUBLIC_BASE_URL"
+      ]
     },
     "dev": {
       "cache": false,
