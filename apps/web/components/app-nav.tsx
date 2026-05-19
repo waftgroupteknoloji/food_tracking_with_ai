@@ -26,9 +26,9 @@ export function AppNav({ email }: { email: string }) {
     },
   });
 
-  // Bugün ve Günlük kendi AI-modal'lı nav'larını render ediyor — burada
-  // mount etmeyelim ki iki nav üst üste binmesin.
-  if (pathname === '/dashboard' || pathname === '/gunluk') return null;
+  // Bugün, Günlük ve Geçmiş kendi AI-modal'lı nav'larını render ediyor —
+  // burada mount etmeyelim ki iki nav üst üste binmesin.
+  if (pathname === '/dashboard' || pathname === '/gunluk' || pathname === '/history') return null;
 
   const initial = (email[0] || 'S').toUpperCase();
 
