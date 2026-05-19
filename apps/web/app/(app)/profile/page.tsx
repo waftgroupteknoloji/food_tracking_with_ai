@@ -5,11 +5,14 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { api, apiClient } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, Flame, Camera, Scale } from 'lucide-react';
+import { Settings, Flame, Camera, Scale, Target } from 'lucide-react';
 import {
   calculateBMI,
   bmiCategory,
   ageFromBirthDate,
+  calculateBMR,
+  calculateTDEE,
+  suggestedDailyKcal,
 } from '@yemek-takip/utils';
 import type { Meal } from '@yemek-takip/validators';
 
@@ -42,6 +45,8 @@ export default function ProfilePage() {
   const sex = user?.profile.sex;
   const birthDate = user?.profile.birthDate;
   const goalWeightKg = user?.profile.goalWeightKg;
+  const activityLevel = user?.profile.activityLevel;
+  const manualTarget = user?.profile.targetDailyKcal;
 
   const allWeights = weightAll.data ?? [];
   const startWeight = allWeights[0]?.weightKg;
@@ -51,6 +56,24 @@ export default function ProfilePage() {
   const bmi =
     currentWeight && heightCm ? calculateBMI(currentWeight, heightCm) : null;
   const age = birthDate ? ageFromBirthDate(birthDate) : null;
+
+  const calorieCalc =
+    currentWeight && heightCm && age && sex && activityLevel
+      ? (() => {
+          const bmr = calculateBMR({
+            weightKg: currentWeight,
+            heightCm,
+            ageYears: age,
+            sex: sex as 'male' | 'female' | 'other',
+          });
+          const tdee = calculateTDEE(
+            bmr,
+            activityLevel as 'sedentary' | 'light' | 'moderate' | 'active',
+          );
+          return { bmr, tdee, suggested: suggestedDailyKcal(tdee) };
+        })()
+      : null;
+  const dailyTarget = manualTarget ?? calorieCalc?.suggested ?? null;
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 pb-24 md:pb-8 space-y-6 animate-fade-in">
@@ -97,6 +120,41 @@ export default function ProfilePage() {
           </Button>
         </CardContent>
       </Card>
+
+      {calorieCalc && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Target size={16} className="text-primary" />
+                  Günlük kalori limiti
+                </div>
+                <div className="text-4xl font-bold mt-2">
+                  {dailyTarget} <span className="text-base font-normal text-muted-foreground">kcal</span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {manualTarget ? 'Manuel olarak ayarlandı' : 'Otomatik hesap (TDEE − 500 kcal)'}
+                </div>
+              </div>
+              <div className="text-right text-xs text-muted-foreground space-y-1">
+                <div>
+                  BMR <strong className="text-foreground">{calorieCalc.bmr}</strong>
+                </div>
+                <div>
+                  TDEE <strong className="text-foreground">{calorieCalc.tdee}</strong>
+                </div>
+                <div className="capitalize">
+                  Aktivite <strong className="text-foreground">{activityLevel}</strong>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4">
+              Kilo değiştikçe limit otomatik güncellenir. {currentWeight} kg → {dailyTarget} kcal/gün.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
