@@ -1,4 +1,7 @@
-/* Dark, oklch-based design tokens scoped to the Bugün screen. */
+/* Dark, oklch-based design tokens scoped to the Bugün screen.
+   .bugun-vars exposes the variables alone (for the shared top nav etc.).
+   .bugun-app adds the wrapper background + min-height for full pages. */
+.bugun-vars,
 .bugun-app {
   --bg: oklch(0.158 0.018 250);
   --bg-deep: oklch(0.122 0.020 250);
@@ -31,6 +34,9 @@
   --shadow-1: 0 1px 0 oklch(1 0 0 / 0.04) inset, 0 1px 2px oklch(0 0 0 / 0.35);
   --shadow-2: 0 1px 0 oklch(1 0 0 / 0.05) inset, 0 8px 32px oklch(0 0 0 / 0.45);
 
+}
+
+.bugun-app {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-inter, 'Inter'), system-ui, sans-serif;
@@ -38,34 +44,34 @@
   min-height: 100vh;
 }
 
-.bugun-app .num {
+:is(.bugun-app, .bugun-vars) .num {
   font-family: var(--font-jetbrains-mono, 'JetBrains Mono'), ui-monospace, monospace;
   font-feature-settings: 'tnum' 1, 'ss01' 1;
   letter-spacing: -0.01em;
 }
-.bugun-app .disp {
+:is(.bugun-app, .bugun-vars) .disp {
   font-family: var(--font-space-grotesk, 'Space Grotesk'), system-ui, sans-serif;
   letter-spacing: -0.02em;
 }
-.bugun-app .mono {
+:is(.bugun-app, .bugun-vars) .mono {
   font-family: var(--font-jetbrains-mono, 'JetBrains Mono'), ui-monospace, monospace;
   font-feature-settings: 'tnum' 1;
 }
 
-.bugun-app .b-card {
+:is(.bugun-app, .bugun-vars) .b-card {
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r);
   box-shadow: var(--shadow-1);
 }
-.bugun-app .b-card-2 {
+:is(.bugun-app, .bugun-vars) .b-card-2 {
   background: linear-gradient(180deg, var(--surface-2), var(--surface));
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-2);
 }
 
-.bugun-app .b-chip {
+:is(.bugun-app, .bugun-vars) .b-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -78,18 +84,18 @@
   border: 1px solid var(--border-2);
   color: var(--text-2);
 }
-.bugun-app .b-chip-lime {
+:is(.bugun-app, .bugun-vars) .b-chip-lime {
   background: color-mix(in oklch, var(--lime) 14%, transparent);
   color: var(--lime);
   border-color: color-mix(in oklch, var(--lime) 22%, transparent);
 }
-.bugun-app .b-chip-cyan {
+:is(.bugun-app, .bugun-vars) .b-chip-cyan {
   background: color-mix(in oklch, var(--cyan) 14%, transparent);
   color: var(--cyan);
   border-color: color-mix(in oklch, var(--cyan) 22%, transparent);
 }
 
-.bugun-app .b-btn {
+:is(.bugun-app, .bugun-vars) .b-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -107,27 +113,27 @@
   text-decoration: none;
   transition: transform 0.12s ease, background 0.12s;
 }
-.bugun-app .b-btn:hover {
+:is(.bugun-app, .bugun-vars) .b-btn:hover {
   background: var(--surface-3);
 }
-.bugun-app .b-btn-primary {
+:is(.bugun-app, .bugun-vars) .b-btn-primary {
   background: var(--primary);
   color: oklch(0.18 0.02 130);
   border-color: color-mix(in oklch, var(--primary) 60%, black);
   box-shadow: 0 1px 0 oklch(1 0 0 / 0.3) inset, 0 6px 18px oklch(0 0 0 / 0.4);
 }
-.bugun-app .b-btn-primary:hover {
+:is(.bugun-app, .bugun-vars) .b-btn-primary:hover {
   background: color-mix(in oklch, var(--primary) 92%, white);
 }
-.bugun-app .b-btn-ghost {
+:is(.bugun-app, .bugun-vars) .b-btn-ghost {
   background: transparent;
 }
-.bugun-app .b-btn:disabled {
+:is(.bugun-app, .bugun-vars) .b-btn:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-.bugun-app .b-label-xs {
+:is(.bugun-app, .bugun-vars) .b-label-xs {
   font-size: 10.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -135,19 +141,19 @@
   font-weight: 600;
 }
 
-.bugun-app .b-macrobar {
+:is(.bugun-app, .bugun-vars) .b-macrobar {
   height: 6px;
   background: oklch(1 0 0 / 0.06);
   border-radius: 999px;
   overflow: hidden;
 }
-.bugun-app .b-macrobar > i {
+:is(.bugun-app, .bugun-vars) .b-macrobar > i {
   display: block;
   height: 100%;
   border-radius: 999px;
 }
 
-.bugun-app .b-photo-ph {
+:is(.bugun-app, .bugun-vars) .b-photo-ph {
   background: repeating-linear-gradient(
     45deg,
     oklch(0.30 0.02 250) 0 6px,

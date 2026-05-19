@@ -263,7 +263,8 @@ function DesktopNav({
   const pathname = usePathname();
   const items: { id: string; label: string; href: string; icon: IconName }[] = [
     { id: 'bugun', label: 'Bugün', href: '/dashboard', icon: 'home' },
-    { id: 'gecmis', label: 'Geçmiş', href: '/history', icon: 'clock' },
+    { id: 'gunluk', label: 'Günlük', href: '/gunluk', icon: 'clock' },
+    { id: 'gecmis', label: 'Geçmiş', href: '/history', icon: 'trend' },
     { id: 'kilo', label: 'Kilo', href: '/weight', icon: 'scale' },
     { id: 'profil', label: 'Profil', href: '/profile', icon: 'user' },
   ];

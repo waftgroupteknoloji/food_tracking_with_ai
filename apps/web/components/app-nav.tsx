@@ -4,16 +4,16 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui/button';
-import { LogOut, Home, User, History, Scale, Plus } from 'lucide-react';
+import { Icon, type IconName } from '@/components/bugun/icon';
+import '@/components/bugun/bugun-tokens.css';
 
-const links = [
-  { href: '/dashboard', label: 'Bugün', icon: Home },
-  { href: '/history', label: 'Geçmiş', icon: History },
-  { href: '/weight', label: 'Kilo', icon: Scale },
-  { href: '/profile', label: 'Profil', icon: User },
-] as const;
+const items: { id: string; label: string; href: string; icon: IconName }[] = [
+  { id: 'bugun', label: 'Bugün', href: '/dashboard', icon: 'home' },
+  { id: 'gunluk', label: 'Günlük', href: '/gunluk', icon: 'clock' },
+  { id: 'gecmis', label: 'Geçmiş', href: '/history', icon: 'trend' },
+  { id: 'kilo', label: 'Kilo', href: '/weight', icon: 'scale' },
+  { id: 'profil', label: 'Profil', href: '/profile', icon: 'user' },
+];
 
 export function AppNav({ email }: { email: string }) {
   const pathname = usePathname();
@@ -26,78 +26,114 @@ export function AppNav({ email }: { email: string }) {
     },
   });
 
-  // The Bugün dashboard ships its own top nav + mobile tab bar.
-  if (pathname === '/dashboard') return null;
+  // Bugün ve Günlük kendi AI-modal'lı nav'larını render ediyor — burada
+  // mount etmeyelim ki iki nav üst üste binmesin.
+  if (pathname === '/dashboard' || pathname === '/gunluk') return null;
+
+  const initial = (email[0] || 'S').toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link href="/dashboard" className="font-bold text-xl">
-          <span className="text-primary">Yemek</span>
-          <span className="text-accent"> Takip</span>
+    <nav
+      className="bugun-vars"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px 28px',
+        borderBottom: '1px solid var(--border-2)',
+        background: 'oklch(0.13 0.018 250 / 0.78)',
+        backdropFilter: 'blur(10px)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 20,
+        flexWrap: 'wrap',
+        gap: 12,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+        <Link
+          href="/dashboard"
+          className="disp"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontWeight: 700,
+            fontSize: 17,
+            textDecoration: 'none',
+            color: 'var(--text)',
+            fontFamily: 'var(--font-space-grotesk), system-ui, sans-serif',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          <span style={{ color: 'var(--primary)' }}>
+            <Icon name="logo" size={22} />
+          </span>
+          <span>
+            yemek<span style={{ color: 'var(--primary)' }}>·</span>takip
+          </span>
         </Link>
-
-        <nav className="hidden md:flex items-center gap-1">
-          {links.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
+        <div style={{ display: 'flex', gap: 4 }}>
+          {items.map((it) => {
+            const isActive =
+              pathname === it.href || (pathname && pathname.startsWith(it.href + '/'));
             return (
               <Link
-                key={href}
-                href={href}
-                className={cn(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition',
-                  active
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
-                )}
+                key={it.id}
+                href={it.href}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 14px',
+                  borderRadius: 10,
+                  textDecoration: 'none',
+                  fontSize: 13.5,
+                  fontWeight: 500,
+                  color: isActive ? 'var(--text)' : 'var(--text-3)',
+                  background: isActive ? 'oklch(1 0 0 / 0.06)' : 'transparent',
+                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                }}
               >
-                <Icon size={16} />
-                {label}
+                <Icon
+                  name={it.icon}
+                  size={16}
+                  color={isActive ? 'var(--primary)' : 'currentColor'}
+                />
+                {it.label}
               </Link>
             );
           })}
-        </nav>
-
-        <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="accent" className="hidden sm:inline-flex">
-            <Link href="/add/meal">
-              <Plus size={16} /> Ekle
-            </Link>
-          </Button>
-          <span className="hidden lg:block text-sm text-muted-foreground">{email}</span>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => logout.mutate()}
-            disabled={logout.isPending}
-            title="Çıkış"
-          >
-            <LogOut size={18} />
-          </Button>
         </div>
       </div>
-
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-background z-40">
-        <div className="grid grid-cols-4">
-          {links.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  'flex flex-col items-center gap-1 py-2 text-xs',
-                  active ? 'text-primary' : 'text-muted-foreground',
-                )}
-              >
-                <Icon size={20} />
-                {label}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-    </header>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Link href="/add/meal" className="b-btn b-btn-primary" style={{ height: 36 }}>
+          <Icon name="camera" size={16} /> Yemek ekle
+        </Link>
+        <button
+          type="button"
+          onClick={() => logout.mutate()}
+          disabled={logout.isPending}
+          aria-label="Çıkış"
+          title={email}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 999,
+            background: 'linear-gradient(135deg, var(--primary), var(--coral))',
+            display: 'grid',
+            placeItems: 'center',
+            fontWeight: 700,
+            fontSize: 13,
+            color: '#0a0d12',
+            border: 'none',
+            cursor: 'pointer',
+            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+          }}
+        >
+          {initial}
+        </button>
+      </div>
+    </nav>
   );
 }
