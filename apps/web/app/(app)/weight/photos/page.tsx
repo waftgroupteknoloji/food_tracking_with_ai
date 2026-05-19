@@ -88,7 +88,7 @@ export default function WeightPhotosPage() {
                   )}
                 </div>
                 <CardDescription>
-                  {a.weightKg} kg → {b.weightKg} kg. Slider'ı sürükle.
+                  {a.weightKg} kg → {b.weightKg} kg. Slider&apos;ı sürükle.
                 </CardDescription>
               </CardHeader>
               <CardContent>

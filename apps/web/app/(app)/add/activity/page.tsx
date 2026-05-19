@@ -50,7 +50,7 @@ export default function AddActivityPage() {
         <CardHeader>
           <CardTitle>Aktiviteni anlat</CardTitle>
           <CardDescription>
-            "1 saat yürüdüm, 10 dk koştum, 30 dk yüzdüm" gibi virgülle ayır.
+            &ldquo;1 saat yürüdüm, 10 dk koştum, 30 dk yüzdüm&rdquo; gibi virgülle ayır.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

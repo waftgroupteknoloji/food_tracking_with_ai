@@ -81,7 +81,7 @@ export default function ProfileEditPage() {
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Profil düzenle</h1>
         <p className="text-muted-foreground">
-          Bilgilerini doldurursan günlük kalori hedefin BMR/TDEE'den otomatik hesaplanır.
+          Bilgilerini doldurursan günlük kalori hedefin BMR/TDEE&apos;den otomatik hesaplanır.
         </p>
       </header>
 

@@ -70,7 +70,7 @@ export function ActivityEditor({ initial }: { initial: Activity }) {
           <CardTitle>Aktivite</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground italic">"{initial.inputText}"</p>
+          <p className="text-sm text-muted-foreground italic">&ldquo;{initial.inputText}&rdquo;</p>
         </CardContent>
       </Card>
 

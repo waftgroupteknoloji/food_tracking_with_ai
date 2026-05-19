@@ -190,7 +190,7 @@ export default function AddMealPage() {
           <CardHeader>
             <CardTitle className="text-xl">Yediklerini yaz</CardTitle>
             <CardDescription>
-              "3 yumurta, biraz peynir, 2 dilim beyaz ekmek" gibi virgülle ayır.
+              &ldquo;3 yumurta, biraz peynir, 2 dilim beyaz ekmek&rdquo; gibi virgülle ayır.
               AI miktarları çözüp kaloriyi hesaplar.
             </CardDescription>
           </CardHeader>
@@ -246,7 +246,7 @@ export default function AddMealPage() {
       )}
 
       <div className="text-center text-xs text-muted-foreground">
-        AI analizi 3-10 saniye sürebilir. Tahmin yanlışsa sonraki ekranda her item'ı düzenleyebilirsin.
+        AI analizi 3-10 saniye sürebilir. Tahmin yanlışsa sonraki ekranda her item&apos;ı düzenleyebilirsin.
       </div>
     </main>
   );
