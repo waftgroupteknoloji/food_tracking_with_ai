@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Yemek Takip",
+    "slug": "yemek-takip",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "scheme": "yemektakip",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yemektakip.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#16a34a"
+      },
+      "package": "com.yemektakip.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Yemek fotoğrafı yüklemek için galeri izni gerekiyor.",
+          "cameraPermission": "Yemek fotoğrafı çekmek için kamera izni gerekiyor."
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "http://10.153.28.71:3000"
+    }
+  }
+}

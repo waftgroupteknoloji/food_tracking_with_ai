@@ -1,0 +1,197 @@
+/* Dark, oklch-based design tokens scoped to the Bugün screen. */
+.bugun-app {
+  --bg: oklch(0.158 0.018 250);
+  --bg-deep: oklch(0.122 0.020 250);
+  --surface: oklch(0.215 0.020 250);
+  --surface-2: oklch(0.255 0.022 250);
+  --surface-3: oklch(0.305 0.022 250);
+  --border: oklch(0.305 0.018 250);
+  --border-2: oklch(0.255 0.014 250);
+  --text: oklch(0.975 0.004 250);
+  --text-2: oklch(0.78 0.010 250);
+  --text-3: oklch(0.60 0.015 250);
+  --text-4: oklch(0.46 0.015 250);
+  --lime: oklch(0.88 0.22 130);
+  --lime-2: oklch(0.72 0.18 130);
+  --coral: oklch(0.74 0.18 35);
+  --coral-2: oklch(0.62 0.18 30);
+  --cyan: oklch(0.80 0.13 220);
+  --amber: oklch(0.82 0.16 75);
+  --magenta: oklch(0.70 0.21 0);
+  --violet: oklch(0.72 0.16 290);
+  --prot: var(--lime);
+  --carb: var(--amber);
+  --fat: var(--coral);
+  --primary: var(--lime);
+
+  --r-sm: 8px;
+  --r: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --shadow-1: 0 1px 0 oklch(1 0 0 / 0.04) inset, 0 1px 2px oklch(0 0 0 / 0.35);
+  --shadow-2: 0 1px 0 oklch(1 0 0 / 0.05) inset, 0 8px 32px oklch(0 0 0 / 0.45);
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-inter, 'Inter'), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.bugun-app .num {
+  font-family: var(--font-jetbrains-mono, 'JetBrains Mono'), ui-monospace, monospace;
+  font-feature-settings: 'tnum' 1, 'ss01' 1;
+  letter-spacing: -0.01em;
+}
+.bugun-app .disp {
+  font-family: var(--font-space-grotesk, 'Space Grotesk'), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+.bugun-app .mono {
+  font-family: var(--font-jetbrains-mono, 'JetBrains Mono'), ui-monospace, monospace;
+  font-feature-settings: 'tnum' 1;
+}
+
+.bugun-app .b-card {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-1);
+}
+.bugun-app .b-card-2 {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-2);
+}
+
+.bugun-app .b-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  background: oklch(1 0 0 / 0.04);
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+}
+.bugun-app .b-chip-lime {
+  background: color-mix(in oklch, var(--lime) 14%, transparent);
+  color: var(--lime);
+  border-color: color-mix(in oklch, var(--lime) 22%, transparent);
+}
+.bugun-app .b-chip-cyan {
+  background: color-mix(in oklch, var(--cyan) 14%, transparent);
+  color: var(--cyan);
+  border-color: color-mix(in oklch, var(--cyan) 22%, transparent);
+}
+
+.bugun-app .b-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.12s ease, background 0.12s;
+}
+.bugun-app .b-btn:hover {
+  background: var(--surface-3);
+}
+.bugun-app .b-btn-primary {
+  background: var(--primary);
+  color: oklch(0.18 0.02 130);
+  border-color: color-mix(in oklch, var(--primary) 60%, black);
+  box-shadow: 0 1px 0 oklch(1 0 0 / 0.3) inset, 0 6px 18px oklch(0 0 0 / 0.4);
+}
+.bugun-app .b-btn-primary:hover {
+  background: color-mix(in oklch, var(--primary) 92%, white);
+}
+.bugun-app .b-btn-ghost {
+  background: transparent;
+}
+.bugun-app .b-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.bugun-app .b-label-xs {
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.bugun-app .b-macrobar {
+  height: 6px;
+  background: oklch(1 0 0 / 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.bugun-app .b-macrobar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.bugun-app .b-photo-ph {
+  background: repeating-linear-gradient(
+    45deg,
+    oklch(0.30 0.02 250) 0 6px,
+    oklch(0.26 0.02 250) 6px 12px
+  );
+  color: var(--text-3);
+  font-family: var(--font-jetbrains-mono, 'JetBrains Mono'), ui-monospace, monospace;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.bugun-modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: oklch(0 0 0 / 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  animation: bugun-fade 0.18s ease;
+}
+.bugun-modal-shell {
+  width: min(560px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: 22px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 80px oklch(0 0 0 / 0.5);
+  animation: bugun-pop 0.22s cubic-bezier(0.2, 0.7, 0.3, 1.1);
+}
+@keyframes bugun-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bugun-pop {
+  from { transform: scale(0.96) translateY(8px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+@keyframes bugun-spin {
+  from { transform: rotate(0); }
+  to { transform: rotate(360deg); }
+}
