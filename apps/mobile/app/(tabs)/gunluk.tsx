@@ -82,8 +82,6 @@ interface TimelineActivity {
   iso: string;
 }
 
-type TimelineEntry = TimelineMeal | TimelineActivity;
-
 interface DayShape {
   iso: string;
   date: Date;
@@ -513,13 +511,17 @@ function MacroMini({
 
 function DayTimeline({ day }: { day: DayShape }) {
   const router = useRouter();
-  const entries = useMemo<TimelineEntry[]>(() => {
-    const all: TimelineEntry[] = [...day.meals, ...day.activities];
-    all.sort((x, y) => x.iso.localeCompare(y.iso));
-    return all;
-  }, [day]);
 
-  if (entries.length === 0) {
+  const meals = useMemo(
+    () => [...day.meals].sort((a, b) => a.iso.localeCompare(b.iso)),
+    [day],
+  );
+  const activities = useMemo(
+    () => [...day.activities].sort((a, b) => a.iso.localeCompare(b.iso)),
+    [day],
+  );
+
+  if (meals.length === 0 && activities.length === 0) {
     return (
       <View style={s.emptyDay}>
         <Text style={{ color: C.text4, fontSize: 12.5 }}>Bu gün için kayıt yok.</Text>
@@ -529,24 +531,29 @@ function DayTimeline({ day }: { day: DayShape }) {
 
   return (
     <View style={{ marginTop: 12, gap: 8 }}>
-      {entries.map((e) => {
-        if (e._type === 'meal') {
-          return (
-            <MealRow
-              key={`m-${e.id}`}
-              meal={e}
-              onPress={() => router.push(`/meal/${e.id}`)}
-            />
-          );
-        }
-        return (
-          <ActivityRow
-            key={`a-${e.id}`}
-            act={e}
-            onPress={() => router.push(`/activity/${e.id}`)}
-          />
-        );
-      })}
+      {meals.map((m) => (
+        <MealRow
+          key={`m-${m.id}`}
+          meal={m}
+          onPress={() => router.push(`/meal/${m.id}`)}
+        />
+      ))}
+
+      {meals.length > 0 && activities.length > 0 && (
+        <View style={s.timelineDivider}>
+          <View style={s.dividerLine} />
+          <Text style={s.dividerLabel}>Aktiviteler</Text>
+          <View style={s.dividerLine} />
+        </View>
+      )}
+
+      {activities.map((a) => (
+        <ActivityRow
+          key={`a-${a.id}`}
+          act={a}
+          onPress={() => router.push(`/activity/${a.id}`)}
+        />
+      ))}
     </View>
   );
 }
@@ -628,26 +635,44 @@ function ActivityRow({ act, onPress }: { act: TimelineActivity; onPress: () => v
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [s.activityCard, { opacity: pressed ? 0.9 : 1 }]}
+      style={({ pressed }) => [s.mealCard, { opacity: pressed ? 0.9 : 1 }]}
     >
-      <View style={s.activityIcon}>
-        <Ionicons name="pulse" size={22} color={C.coral} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-        <Text style={s.mealName} numberOfLines={1}>
-          {act.name}
-        </Text>
-        <Text style={{ fontSize: 11, color: C.text3 }}>
-          {act.time} · {act.dur} dk
-        </Text>
-      </View>
-      <View style={[s.kcalPill, s.kcalPillCoral]}>
-        <Text style={{ fontSize: 18, fontWeight: '700', color: C.coral, letterSpacing: -0.3 }}>
-          −{act.kcal}
-        </Text>
-        <Text style={{ fontSize: 9, color: C.text3, marginTop: 1, letterSpacing: 0.5 }}>
-          KCAL
-        </Text>
+      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+        <View
+          style={[
+            s.mealPhoto,
+            {
+              backgroundColor: 'rgba(240, 141, 106, 0.14)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+          ]}
+        >
+          <Ionicons name="pulse" size={28} color={C.coral} />
+        </View>
+
+        <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+          <Text style={s.mealName} numberOfLines={1}>
+            {act.name}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <View style={s.kindPill}>
+              <Text style={{ fontSize: 10, color: C.text2, fontWeight: '600' }}>
+                {act.dur} dk
+              </Text>
+            </View>
+            <Text style={{ fontSize: 11, color: C.text3 }}>· {act.time}</Text>
+          </View>
+        </View>
+
+        <View style={[s.kcalPill, s.kcalPillCoral]}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: C.coral, letterSpacing: -0.3 }}>
+            −{act.kcal}
+          </Text>
+          <Text style={{ fontSize: 9, color: C.text3, marginTop: 1, letterSpacing: 0.5 }}>
+            KCAL
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -802,23 +827,25 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: 10,
   },
-  activityCard: {
+  timelineDivider: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    backgroundColor: C.surface2,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.border2,
+    gap: 10,
+    paddingVertical: 6,
+    marginTop: 4,
+    marginBottom: 2,
   },
-  activityIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(240, 141, 106, 0.14)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: C.border2,
+  },
+  dividerLabel: {
+    fontSize: 9.5,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: C.text3,
+    fontWeight: '600',
   },
   emptyDay: {
     marginTop: 12,
