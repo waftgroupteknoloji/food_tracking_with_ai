@@ -1,7 +1,8 @@
 import { Redirect, Tabs } from 'expo-router';
+import { Platform } from 'react-native';
 import { useAuthStore } from '@/lib/auth-store';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@yemek-takip/ui-tokens';
+import { C } from '@/lib/theme';
 
 export default function TabsLayout() {
   const status = useAuthStore((s) => s.status);
@@ -12,11 +13,22 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary[600],
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: C.lime,
+        tabBarInactiveTintColor: C.text3,
         tabBarStyle: {
+          backgroundColor: C.bg,
           borderTopWidth: 1,
+          borderTopColor: C.border2,
+          height: Platform.select({ ios: 84, android: 64 }),
+          paddingTop: 6,
+          paddingBottom: Platform.select({ ios: 26, android: 8 }),
         },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          marginTop: 2,
+        },
+        sceneStyle: { backgroundColor: C.bg },
       }}
     >
       <Tabs.Screen
@@ -41,8 +53,8 @@ export default function TabsLayout() {
         name="add"
         options={{
           title: 'Ekle',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" size={size + 8} color={colors.accent[500]} />
+          tabBarIcon: ({ size }) => (
+            <Ionicons name="add-circle" size={size + 10} color={C.lime} />
           ),
         }}
       />

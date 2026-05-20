@@ -18,30 +18,11 @@ import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { addDaysToLocal, todayLocalDate } from '@yemek-takip/utils';
 import type { DailyStats, Meal } from '@yemek-takip/validators';
+import { C } from '@/lib/theme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-// Dark theme tokens (mirrored from web's bugun-tokens.css, oklch → hex approx).
-const C = {
-  bg: '#15171c',
-  bgDeep: '#0e1015',
-  surface: '#1f2128',
-  surface2: '#262932',
-  surface3: '#31343d',
-  border: '#31343d',
-  border2: '#272930',
-  text: '#f7f8fa',
-  text2: '#bfc2c8',
-  text3: '#8f939c',
-  text4: '#6a6e77',
-  lime: '#b8f04d',
-  coral: '#f08d6a',
-  cyan: '#7ec8e0',
-  amber: '#e8c14a',
-  magenta: '#e96a85',
-};
 
 const TR_DAYS_LONG = [
   'Pazar',
@@ -574,55 +555,72 @@ function MealRow({ meal, onPress }: { meal: TimelineMeal; onPress: () => void })
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        s.entryRow,
-        { opacity: pressed ? 0.85 : 1 },
-      ]}
+      style={({ pressed }) => [s.mealCard, { opacity: pressed ? 0.9 : 1 }]}
     >
-      {meal.photoUrl ? (
-        <Image
-          source={{ uri: meal.photoUrl }}
-          style={{ width: 64, height: 64, borderRadius: 12 }}
-          resizeMode="cover"
-        />
-      ) : (
-        <View
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: 12,
-            backgroundColor: `hsl(${meal.hue}, 32%, 38%)`,
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-          }}
-        >
-          <Ionicons name="restaurant" size={22} color="rgba(255,255,255,0.65)" />
+      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+        {meal.photoUrl ? (
+          <Image
+            source={{ uri: meal.photoUrl }}
+            style={s.mealPhoto}
+            resizeMode="cover"
+          />
+        ) : (
+          <View
+            style={[
+              s.mealPhoto,
+              {
+                backgroundColor: `hsl(${meal.hue}, 38%, 36%)`,
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+              },
+            ]}
+          >
+            <Ionicons name="restaurant" size={24} color="rgba(255,255,255,0.7)" />
+          </View>
+        )}
+
+        <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+          <Text style={s.mealName} numberOfLines={1}>
+            {meal.name}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <View style={s.kindPill}>
+              <Text style={{ fontSize: 10, color: C.text2, fontWeight: '600' }}>
+                {meal.kind}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 11, color: C.text3 }}>· {meal.time}</Text>
+          </View>
+        </View>
+
+        <View style={s.kcalPill}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: C.lime, letterSpacing: -0.3 }}>
+            {meal.kcal}
+          </Text>
+          <Text style={{ fontSize: 9, color: C.text3, marginTop: 1, letterSpacing: 0.5 }}>
+            KCAL
+          </Text>
+        </View>
+      </View>
+
+      {(meal.p > 0 || meal.c > 0 || meal.f > 0) && (
+        <View style={s.macroRow}>
+          <MacroChip label="P" value={meal.p} color={C.lime} />
+          <MacroChip label="K" value={meal.c} color={C.amber} />
+          <MacroChip label="Y" value={meal.f} color={C.coral} />
         </View>
       )}
-      <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-        <Text style={s.mealName} numberOfLines={1}>
-          {meal.name}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <View style={s.kindPill}>
-            <Text style={{ fontSize: 9.5, color: C.text3, fontWeight: '500' }}>
-              {meal.kind}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 10.5, color: C.text3 }}>{meal.time}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 2 }}>
-          <Text style={{ fontSize: 10.5, color: C.lime, fontWeight: '600' }}>{meal.p}p</Text>
-          <Text style={{ fontSize: 10.5, color: C.amber, fontWeight: '600' }}>{meal.c}k</Text>
-          <Text style={{ fontSize: 10.5, color: C.coral, fontWeight: '600' }}>{meal.f}y</Text>
-        </View>
-      </View>
-      <View style={{ alignItems: 'flex-end' }}>
-        <Text style={{ fontSize: 18, fontWeight: '700', color: C.text }}>{meal.kcal}</Text>
-        <Text style={{ fontSize: 9.5, color: C.text3, marginTop: 2 }}>kcal</Text>
-      </View>
     </Pressable>
+  );
+}
+
+function MacroChip({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <View style={s.macroChip}>
+      <Text style={{ fontSize: 10.5, color: C.text4, fontWeight: '600' }}>{label}</Text>
+      <Text style={{ fontSize: 12, color, fontWeight: '700' }}>{value}g</Text>
+    </View>
   );
 }
 
@@ -630,34 +628,26 @@ function ActivityRow({ act, onPress }: { act: TimelineActivity; onPress: () => v
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        s.entryRow,
-        { opacity: pressed ? 0.85 : 1 },
-      ]}
+      style={({ pressed }) => [s.activityCard, { opacity: pressed ? 0.9 : 1 }]}
     >
-      <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          backgroundColor: 'rgba(240, 141, 106, 0.16)',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Ionicons name="pulse" size={20} color={C.coral} />
+      <View style={s.activityIcon}>
+        <Ionicons name="pulse" size={22} color={C.coral} />
       </View>
-      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
         <Text style={s.mealName} numberOfLines={1}>
           {act.name}
         </Text>
-        <Text style={{ fontSize: 10.5, color: C.text3 }}>
+        <Text style={{ fontSize: 11, color: C.text3 }}>
           {act.time} · {act.dur} dk
         </Text>
       </View>
-      <View style={{ alignItems: 'flex-end' }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', color: C.coral }}>−{act.kcal}</Text>
-        <Text style={{ fontSize: 9.5, color: C.text3, marginTop: 2 }}>kcal</Text>
+      <View style={[s.kcalPill, s.kcalPillCoral]}>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: C.coral, letterSpacing: -0.3 }}>
+          −{act.kcal}
+        </Text>
+        <Text style={{ fontSize: 9, color: C.text3, marginTop: 1, letterSpacing: 0.5 }}>
+          KCAL
+        </Text>
       </View>
     </Pressable>
   );
@@ -753,29 +743,82 @@ const s = StyleSheet.create({
     borderRadius: 999,
     overflow: 'hidden',
   },
-  entryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 10,
+  mealCard: {
+    padding: 12,
     backgroundColor: C.surface2,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: C.border2,
+    gap: 12,
+  },
+  mealPhoto: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
   },
   mealName: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: C.text,
     letterSpacing: -0.2,
   },
   kindPill: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 999,
     borderWidth: 1,
     borderColor: C.border2,
+  },
+  kcalPill: {
+    minWidth: 64,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(184, 240, 77, 0.10)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 240, 77, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  kcalPillCoral: {
+    backgroundColor: 'rgba(240, 141, 106, 0.12)',
+    borderColor: 'rgba(240, 141, 106, 0.28)',
+  },
+  macroRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: C.border2,
+  },
+  macroChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 10,
+  },
+  activityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    backgroundColor: C.surface2,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.border2,
+  },
+  activityIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(240, 141, 106, 0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyDay: {
     marginTop: 12,
