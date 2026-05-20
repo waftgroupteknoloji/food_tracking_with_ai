@@ -7,8 +7,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { View, ActivityIndicator } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import { colorScheme } from 'nativewind';
 import { useAuthStore } from '@/lib/auth-store';
 import { C } from '@/lib/theme';
+
+colorScheme.set('dark');
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // ignore
