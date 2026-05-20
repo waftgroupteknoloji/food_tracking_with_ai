@@ -55,7 +55,7 @@ export default function AddScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40, gap: 18 }}>
+      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 110, gap: 18 }}>
         <View>
           <Text style={s.labelXs}>Ekle</Text>
           <Text style={s.h1}>Bir şeyler kaydedelim</Text>

@@ -272,7 +272,7 @@ export default function GunlukScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 110 }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}

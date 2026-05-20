@@ -37,7 +37,7 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950" edges={['top']}>
       <ScrollView
-        contentContainerClassName="p-4 gap-4 pb-8"
+        contentContainerClassName="p-4 gap-4 pb-28"
         refreshControl={
           <RefreshControl
             refreshing={daily.isFetching}
