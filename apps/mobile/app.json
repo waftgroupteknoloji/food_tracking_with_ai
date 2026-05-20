@@ -15,7 +15,10 @@
       "adaptiveIcon": {
         "backgroundColor": "#16a34a"
       },
-      "package": "com.yemektakip.app"
+      "package": "com.yemektakip.app",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -33,7 +36,11 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "http://10.153.28.71:3000"
+      "apiUrl": "https://diyet-kappa.vercel.app",
+      "router": {},
+      "eas": {
+        "projectId": "b92453d7-0466-463c-b778-f32cf40905fd"
+      }
     }
   }
 }

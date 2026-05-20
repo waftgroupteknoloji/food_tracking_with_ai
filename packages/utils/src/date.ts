@@ -42,9 +42,16 @@ export function daysBetween(a: string, b: string): number {
 }
 
 /**
- * Bir localDate'e gün ekler/çıkarır.
+ * Bir localDate'e gün ekler/çıkarır. YYYY-MM-DD → YYYY-MM-DD, TZ bağımsız.
+ * Eski sürüm parseISO + formatInTimeZone('UTC') kullanıyordu — UTC+3 gibi
+ * pozitif offset'lerde her çağrı bir gün geri kayıyordu.
  */
 export function addDaysToLocal(localDate: string, days: number): string {
-  const d = parseISO(localDate);
-  return formatInTimeZone(addDays(d, days), 'UTC', 'yyyy-MM-dd');
+  const [y, m, d] = localDate.split('-').map(Number);
+  if (!y || !m || !d) return localDate;
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
 }
