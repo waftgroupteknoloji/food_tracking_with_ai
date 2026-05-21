@@ -160,7 +160,6 @@ export default function WeightScreen() {
           currentKg={currentKg}
           totalDelta={totalDelta}
           points={heroPoints}
-          onAdd={() => setSheetOpen(true)}
         />
 
         {/* ===== PRIMARY ADD CTA ===== */}
@@ -340,44 +339,6 @@ export default function WeightScreen() {
         </View>
       </ScrollView>
 
-      {/* Floating add-weight button (above tab bar) */}
-      <Pressable
-        onPress={() => setSheetOpen(true)}
-        style={({ pressed }) => [
-          {
-            position: 'absolute',
-            right: 18,
-            bottom: 110,
-            shadowColor: C.lime,
-            shadowOpacity: 0.6,
-            shadowOffset: { width: 0, height: 8 },
-            shadowRadius: 18,
-            elevation: 10,
-          },
-          pressed && { opacity: 0.92, transform: [{ scale: 0.96 }] },
-        ]}
-      >
-        <Gradient
-          colors={['#e4ff8a', '#b8f04d', '#9bd03a']}
-          locations={[0, 0.55, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            height: 48,
-            paddingHorizontal: 18,
-            borderRadius: 999,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            borderWidth: 1.5,
-            borderColor: 'rgba(255,255,255,0.5)',
-          }}
-        >
-          <Ionicons name="add" size={20} color={onPrimary} />
-          <Text style={{ color: onPrimary, fontWeight: '700', fontSize: 14 }}>Tartım</Text>
-        </Gradient>
-      </Pressable>
-
       <AddWeightSheet
         open={sheetOpen}
         initial={currentKg}
@@ -398,12 +359,10 @@ function Hero({
   currentKg,
   totalDelta,
   points,
-  onAdd,
 }: {
   currentKg: number;
   totalDelta: number;
   points: WeightEntry[];
-  onAdd: () => void;
 }) {
   const W = 410;
   const H = 110;
@@ -444,40 +403,9 @@ function Hero({
         </Svg>
       )}
       <View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <View>
-            <Text style={s.labelXs}>Kilo</Text>
-            <Text style={s.heroTitle}>İlerleme grafiği</Text>
-          </View>
-          <Pressable
-            onPress={onAdd}
-            style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]}
-          >
-            <Gradient
-              colors={['#e4ff8a', '#b8f04d', '#9bd03a']}
-              locations={[0, 0.55, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                height: 40,
-                paddingHorizontal: 14,
-                borderRadius: 12,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                borderWidth: 1.5,
-                borderColor: 'rgba(255,255,255,0.55)',
-                shadowColor: C.lime,
-                shadowOpacity: 0.5,
-                shadowOffset: { width: 0, height: 6 },
-                shadowRadius: 14,
-                elevation: 6,
-              }}
-            >
-              <Ionicons name="add" size={18} color={onPrimary} />
-              <Text style={{ color: onPrimary, fontWeight: '700', fontSize: 14 }}>Ekle</Text>
-            </Gradient>
-          </Pressable>
+        <View>
+          <Text style={s.labelXs}>Kilo</Text>
+          <Text style={s.heroTitle}>İlerleme grafiği</Text>
         </View>
 
         <View
