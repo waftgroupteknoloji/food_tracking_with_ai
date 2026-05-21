@@ -10,26 +10,69 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ApiError } from '@yemek-takip/api-client';
 import type { Meal, MealType, MealItem } from '@yemek-takip/validators';
 import { api } from '@/lib/api';
-import { PressableButton } from '@/components/ui/pressable-button';
-import { cn } from '@/lib/cn';
+import { C, onPrimary } from '@/lib/theme';
 
-const MEAL_TYPES: { value: MealType; label: string }[] = [
-  { value: 'breakfast', label: 'Kahvaltı' },
-  { value: 'lunch', label: 'Öğle' },
-  { value: 'dinner', label: 'Akşam' },
-  { value: 'snack', label: 'Atıştırma' },
+const MEAL_SLOTS: { value: MealType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'breakfast', label: 'Kahvaltı', icon: 'cafe-outline' },
+  { value: 'lunch', label: 'Öğle', icon: 'sunny-outline' },
+  { value: 'snack', label: 'Atıştırma', icon: 'leaf-outline' },
+  { value: 'dinner', label: 'Akşam', icon: 'moon-outline' },
 ];
 
-type EditableItem = MealItem & { _localId: string };
+const PORTION_MIN = 20;
+const PORTION_MAX = 600;
+const PORTION_STEP = 20;
+
+type EditableItem = MealItem & {
+  _localId: string;
+  _baseGrams: number;
+  _kcalPerG: number;
+  _protPerG: number;
+  _carbsPerG: number;
+  _fatPerG: number;
+};
+
 const newLocalId = () => Math.random().toString(36).slice(2);
+
+function makeEditable(it: MealItem): EditableItem {
+  const baseGrams = it.grams && it.grams > 0 ? it.grams : 100;
+  const kcal = Number(it.kcal) || 0;
+  const m = it.macros ?? {};
+  return {
+    ...it,
+    _localId: newLocalId(),
+    _baseGrams: baseGrams,
+    _kcalPerG: kcal / baseGrams,
+    _protPerG: (m.protein ?? 0) / baseGrams,
+    _carbsPerG: (m.carbs ?? 0) / baseGrams,
+    _fatPerG: (m.fat ?? 0) / baseGrams,
+  };
+}
+
+function scaleItem(it: EditableItem, newG: number): EditableItem {
+  const g = Math.max(0, Math.round(newG));
+  return {
+    ...it,
+    grams: g,
+    kcal: Math.round(it._kcalPerG * g),
+    macros: {
+      protein: Math.round(it._protPerG * g * 10) / 10,
+      carbs: Math.round(it._carbsPerG * g * 10) / 10,
+      fat: Math.round(it._fatPerG * g * 10) / 10,
+    },
+    isEdited: true,
+  };
+}
 
 export default function MealDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,29 +85,59 @@ export default function MealDetailScreen() {
 
   const [items, setItems] = useState<EditableItem[]>([]);
   const [mealType, setMealType] = useState<MealType | undefined>(undefined);
-  const [userNote, setUserNote] = useState('');
+  const [title, setTitle] = useState('');
+  const [titleFocused, setTitleFocused] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     if (query.data && !hydrated) {
-      setItems(query.data.items.map((it) => ({ ...it, _localId: newLocalId() })));
+      setItems(query.data.items.map((it) => makeEditable(it)));
       setMealType(query.data.mealType);
-      setUserNote(query.data.userNote ?? '');
+      const initialTitle =
+        query.data.userNote?.trim() ||
+        (query.data.aiAnalysis?.rawJson as { meal_description?: string } | undefined)
+          ?.meal_description ||
+        query.data.items[0]?.name ||
+        '';
+      setTitle(initialTitle);
       setHydrated(true);
     }
   }, [query.data, hydrated]);
 
-  const totalKcal = useMemo(
-    () => items.reduce((sum, it) => sum + (Number(it.kcal) || 0), 0),
-    [items],
-  );
+  const totals = useMemo(() => {
+    let kcal = 0;
+    let grams = 0;
+    let protein = 0;
+    let carbs = 0;
+    let fat = 0;
+    for (const it of items) {
+      kcal += Number(it.kcal) || 0;
+      grams += Number(it.grams) || 0;
+      protein += it.macros?.protein ?? 0;
+      carbs += it.macros?.carbs ?? 0;
+      fat += it.macros?.fat ?? 0;
+    }
+    return {
+      kcal: Math.round(kcal),
+      grams: Math.round(grams),
+      protein: Math.round(protein),
+      carbs: Math.round(carbs),
+      fat: Math.round(fat),
+    };
+  }, [items]);
+
+  // per 100g reference, computed from current item proportions
+  const per100Kcal = useMemo(() => {
+    if (totals.grams <= 0) return 0;
+    return Math.round((totals.kcal / totals.grams) * 100);
+  }, [totals]);
 
   const save = useMutation({
     mutationFn: () =>
       api.meals.update(id!, {
         mealType,
-        userNote: userNote.trim() || undefined,
-        items: items.map(({ _localId, ...rest }) => rest),
+        userNote: title.trim() || undefined,
+        items: items.map(({ _localId, _baseGrams, _kcalPerG, _protPerG, _carbsPerG, _fatPerG, ...rest }) => rest),
       }),
     onSuccess: () => router.back(),
     onError: (err) =>
@@ -78,250 +151,299 @@ export default function MealDetailScreen() {
       Alert.alert('Hata', err instanceof ApiError ? err.message : 'Silinemedi'),
   });
 
-  function updateItem(localId: string, patch: Partial<MealItem>) {
+  function bumpItemGrams(localId: string, deltaG: number) {
     setItems((prev) =>
       prev.map((it) =>
-        it._localId === localId ? { ...it, ...patch, isEdited: true } : it,
+        it._localId === localId ? scaleItem(it, (it.grams ?? 0) + deltaG) : it,
       ),
     );
   }
 
+  function setPortion(newTotal: number) {
+    const clamped = Math.max(PORTION_MIN, Math.min(PORTION_MAX, newTotal));
+    const currentTotal = items.reduce((sum, it) => sum + (it.grams ?? 0), 0);
+    if (currentTotal <= 0) return;
+    const ratio = clamped / currentTotal;
+    setItems((prev) => prev.map((it) => scaleItem(it, (it.grams ?? 0) * ratio)));
+  }
+
+  function deleteItem(localId: string) {
+    setItems((prev) => prev.filter((it) => it._localId !== localId));
+  }
+
+  function addItem() {
+    setItems((prev) => [
+      ...prev,
+      {
+        _localId: newLocalId(),
+        name: '',
+        quantity: 1,
+        unit: 'porsiyon',
+        grams: 50,
+        kcal: 0,
+        macros: { protein: 0, carbs: 0, fat: 0 },
+        isEdited: false,
+        isAdded: true,
+        _baseGrams: 50,
+        _kcalPerG: 0,
+        _protPerG: 0,
+        _carbsPerG: 0,
+        _fatPerG: 0,
+      },
+    ]);
+  }
+
   if (query.isLoading || !query.data) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-white dark:bg-neutral-950">
-        <ActivityIndicator size="large" color="#16a34a" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={C.lime} />
       </SafeAreaView>
     );
   }
 
   const meal = query.data;
   const aiError = meal.aiAnalysis.error;
+  const confidence = meal.aiAnalysis.confidence
+    ? Math.round(meal.aiAnalysis.confidence * 100)
+    : null;
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: 'Yemek detayı' }} />
-      <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950" edges={['bottom']}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          className="flex-1"
+          style={{ flex: 1 }}
         >
-          <ScrollView contentContainerClassName="p-4 pb-32 gap-4">
-            {meal.photoUrl ? (
-              <Image
-                source={{ uri: meal.photoUrl }}
-                className="w-full aspect-square rounded-2xl"
-                resizeMode="cover"
-              />
-            ) : meal.inputText ? (
-              <View className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 p-4">
-                <Text className="text-xs uppercase tracking-wide text-neutral-500 mb-1">
-                  Yazdıkların
-                </Text>
-                <Text className="text-sm leading-relaxed text-neutral-900 dark:text-neutral-100">
-                  {meal.inputText}
-                </Text>
+          {/* Header */}
+          <View style={s.header}>
+            <Pressable
+              onPress={() => router.back()}
+              style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons name="chevron-back" size={18} color={C.text2} />
+            </Pressable>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={s.headerTitle}>Düzelt ve onayla</Text>
+              <Text style={s.headerSub}>3 / 3</Text>
+            </View>
+            {confidence != null ? (
+              <View style={s.aiBadge}>
+                <Ionicons name="sparkles" size={11} color={C.lime} />
+                <Text style={s.aiBadgeText}>%{confidence}</Text>
               </View>
-            ) : null}
+            ) : (
+              <View style={{ width: 36 }} />
+            )}
+          </View>
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Hero photo */}
+            <View style={s.hero}>
+              {meal.photoUrl ? (
+                <Image source={{ uri: meal.photoUrl }} style={s.heroPhoto} resizeMode="cover" />
+              ) : (
+                <View style={[s.heroPhoto, { backgroundColor: C.surface2 }]} />
+              )}
+              <LinearGradient
+                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.78)']}
+                locations={[0.3, 1]}
+                style={s.heroGradient}
+                pointerEvents="none"
+              />
+              <View style={s.heroBottom}>
+                <TextInput
+                  value={title}
+                  onChangeText={setTitle}
+                  onFocus={() => setTitleFocused(true)}
+                  onBlur={() => setTitleFocused(false)}
+                  placeholder="Yemek adı"
+                  placeholderTextColor="rgba(247,248,250,0.5)"
+                  style={[
+                    s.heroTitle,
+                    titleFocused && {
+                      borderColor: 'rgba(184, 240, 77, 0.6)',
+                      borderStyle: 'dashed',
+                    },
+                  ]}
+                />
+                <View style={s.heroKcalRow}>
+                  <Text style={s.heroKcal}>{totals.kcal}</Text>
+                  <Text style={s.heroKcalLabel}>
+                    kcal · {totals.grams}g
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => router.back()}
+                style={({ pressed }) => [s.heroChip, pressed && { opacity: 0.85 }]}
+              >
+                <Ionicons name="camera-outline" size={11} color={C.text} />
+                <Text style={s.heroChipText}>Yeniden çek</Text>
+              </Pressable>
+            </View>
 
             {aiError && (
-              <View className="rounded-lg bg-amber-500/10 p-3 flex-row gap-2">
-                <Ionicons name="warning-outline" size={18} color="#b45309" />
-                <Text className="flex-1 text-sm text-amber-800 dark:text-amber-300">
-                  AI analizi yapılamadı: {aiError}. Aşağıdan elle item ekle.
+              <View style={s.warnBox}>
+                <Ionicons name="warning-outline" size={16} color={C.amber} />
+                <Text style={{ flex: 1, color: C.amber, fontSize: 12.5 }}>
+                  AI analizi yapılamadı: {aiError}. Aşağıdan elle düzenle.
                 </Text>
               </View>
             )}
 
-            {/* Meal type */}
-            <View>
-              <Text className="font-semibold mb-2 text-neutral-900 dark:text-neutral-100">
-                Öğün
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {MEAL_TYPES.map((t) => (
-                  <Pressable
-                    key={t.value}
-                    onPress={() =>
-                      setMealType(t.value === mealType ? undefined : t.value)
-                    }
-                    className={cn(
-                      'px-4 py-2 rounded-full border',
-                      mealType === t.value
-                        ? 'bg-primary-600 border-primary-600'
-                        : 'bg-transparent border-neutral-300 dark:border-neutral-700',
-                    )}
+            {/* Portion stepper */}
+            <View style={s.portionCard}>
+              <View style={s.portionHead}>
+                <Text style={s.labelXs}>PORSIYON BÜYÜKLÜĞÜ</Text>
+                <Text style={s.portionPer100}>
+                  per 100g · {per100Kcal} kcal
+                </Text>
+              </View>
+              <View style={s.portionRow}>
+                <Pressable
+                  onPress={() => setPortion(totals.grams - PORTION_STEP)}
+                  style={({ pressed }) => [s.stepBtn, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={s.stepBtnText}>−</Text>
+                </Pressable>
+                <View style={{ flex: 1 }}>
+                  <SliderTrack value={totals.grams} min={PORTION_MIN} max={PORTION_MAX} />
+                  <View style={s.portionValueRow}>
+                    <Text style={s.portionValue}>{totals.grams}</Text>
+                    <Text style={s.portionUnit}>gram</Text>
+                  </View>
+                </View>
+                <Pressable
+                  onPress={() => setPortion(totals.grams + PORTION_STEP)}
+                  style={({ pressed }) => [s.stepBtnPrimary, pressed && { opacity: 0.85 }]}
+                >
+                  <Text style={[s.stepBtnText, { color: onPrimary }]}>+</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Macros */}
+            <View style={s.macroGrid}>
+              <MacroCard label="PROTEİN" value={totals.protein} color={C.lime} />
+              <MacroCard label="KARB" value={totals.carbs} color={C.amber} />
+              <MacroCard label="YAĞ" value={totals.fat} color={C.coral} />
+            </View>
+
+            {/* Ingredients */}
+            <View style={s.section}>
+              <View style={s.sectionHead}>
+                <Text style={s.labelXs}>İÇİNDEKİLER</Text>
+                <Pressable
+                  onPress={addItem}
+                  style={({ pressed }) => [s.addBtn, pressed && { opacity: 0.6 }]}
+                  hitSlop={6}
+                >
+                  <Ionicons name="add" size={12} color={C.lime} />
+                  <Text style={s.addBtnText}>Ekle</Text>
+                </Pressable>
+              </View>
+              <View style={{ gap: 6 }}>
+                {items.length === 0 && (
+                  <Text
+                    style={{
+                      fontSize: 12.5,
+                      color: C.text3,
+                      textAlign: 'center',
+                      paddingVertical: 14,
+                    }}
                   >
-                    <Text
-                      className={cn(
-                        'text-sm font-medium',
-                        mealType === t.value
-                          ? 'text-white'
-                          : 'text-neutral-900 dark:text-neutral-100',
-                      )}
-                    >
-                      {t.label}
-                    </Text>
-                  </Pressable>
+                    Henüz içerik yok. "Ekle"ye bas.
+                  </Text>
+                )}
+                {items.map((it) => (
+                  <IngredientRow
+                    key={it._localId}
+                    item={it}
+                    onBump={(d) => bumpItemGrams(it._localId, d)}
+                    onDelete={() => deleteItem(it._localId)}
+                    onNameChange={(name) =>
+                      setItems((prev) =>
+                        prev.map((p) =>
+                          p._localId === it._localId ? { ...p, name, isEdited: true } : p,
+                        ),
+                      )
+                    }
+                  />
                 ))}
               </View>
             </View>
 
-            {/* Items */}
-            <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <Text className="font-semibold text-neutral-900 dark:text-neutral-100">
-                  Yemekler
-                </Text>
-                <Pressable
-                  onPress={() =>
-                    setItems((prev) => [
-                      ...prev,
-                      {
-                        _localId: newLocalId(),
-                        name: '',
-                        quantity: 1,
-                        unit: 'porsiyon',
-                        kcal: 0,
-                        isEdited: false,
-                        isAdded: true,
-                      },
-                    ])
-                  }
-                  className="flex-row items-center gap-1 px-3 py-1.5 rounded-full bg-primary-100 dark:bg-primary-900/30"
-                >
-                  <Ionicons name="add" size={16} color="#16a34a" />
-                  <Text className="text-primary-700 dark:text-primary-300 font-medium text-sm">
-                    Ekle
-                  </Text>
-                </Pressable>
-              </View>
-
-              {items.length === 0 && (
-                <Text className="text-sm text-neutral-500 text-center py-4">
-                  Henüz item yok.
-                </Text>
-              )}
-
-              {items.map((item) => (
-                <View
-                  key={item._localId}
-                  className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 gap-2"
-                >
-                  <View className="flex-row items-center gap-2">
-                    <TextInput
-                      value={item.name}
-                      onChangeText={(t) => updateItem(item._localId, { name: t })}
-                      placeholder="İsim (ör: Beyaz peynir)"
-                      placeholderTextColor="#9ca3af"
-                      className="flex-1 h-10 px-3 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-                    />
+            {/* Meal slot */}
+            <View style={s.section}>
+              <Text style={[s.labelXs, { marginBottom: 10 }]}>ÖĞÜN</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {MEAL_SLOTS.map((slot) => {
+                  const active = mealType === slot.value;
+                  return (
                     <Pressable
-                      onPress={() =>
-                        setItems((prev) => prev.filter((i) => i._localId !== item._localId))
-                      }
-                      className="p-2"
+                      key={slot.value}
+                      onPress={() => setMealType(active ? undefined : slot.value)}
+                      android_ripple={{ color: 'rgba(184, 240, 77, 0.12)' }}
+                      style={({ pressed }) => [
+                        s.slotBtn,
+                        active && s.slotBtnActive,
+                        pressed && !active && { backgroundColor: C.surface2 },
+                      ]}
                     >
-                      <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                      <Ionicons
+                        name={slot.icon}
+                        size={20}
+                        color={active ? C.lime : C.text2}
+                      />
+                      <Text style={[s.slotLabel, active && s.slotLabelActive]}>
+                        {slot.label}
+                      </Text>
                     </Pressable>
-                  </View>
-                  <View className="flex-row gap-2">
-                    <View className="flex-1">
-                      <Text className="text-xs text-neutral-500 mb-1">Gram</Text>
-                      <TextInput
-                        value={item.grams !== undefined ? String(item.grams) : ''}
-                        onChangeText={(t) =>
-                          updateItem(item._localId, {
-                            grams: t ? Number(t) : undefined,
-                          })
-                        }
-                        keyboardType="numeric"
-                        placeholder="—"
-                        placeholderTextColor="#9ca3af"
-                        className="h-10 px-3 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-                      />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-xs text-neutral-500 mb-1">Kalori</Text>
-                      <TextInput
-                        value={String(item.kcal)}
-                        onChangeText={(t) =>
-                          updateItem(item._localId, { kcal: Number(t) || 0 })
-                        }
-                        keyboardType="numeric"
-                        className="h-10 px-3 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-                      />
-                    </View>
-                  </View>
-                  <View className="flex-row gap-2">
-                    {item.isAdded && (
-                      <View className="px-2 py-0.5 rounded-full bg-accent-500/10">
-                        <Text className="text-xs text-accent-600">Eklendi</Text>
-                      </View>
-                    )}
-                    {item.isEdited && !item.isAdded && (
-                      <View className="px-2 py-0.5 rounded-full bg-primary-500/10">
-                        <Text className="text-xs text-primary-600">Düzenlendi</Text>
-                      </View>
-                    )}
-                    {!item.isEdited && !item.isAdded && (
-                      <View className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
-                        <Text className="text-xs text-neutral-500">AI tahmini</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              ))}
+                  );
+                })}
+              </View>
             </View>
 
-            {/* Not */}
-            <View>
-              <Text className="font-semibold mb-1 text-neutral-900 dark:text-neutral-100">
-                Not (opsiyonel)
-              </Text>
-              <TextInput
-                value={userNote}
-                onChangeText={setUserNote}
-                placeholder="ör: Anne yapımı, hafif baharatlı..."
-                placeholderTextColor="#9ca3af"
-                multiline
-                maxLength={500}
-                className="min-h-12 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
-              />
-            </View>
           </ScrollView>
 
-          {/* Sticky bottom bar */}
-          <View className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-2 bg-white/95 dark:bg-neutral-950/95 border-t border-neutral-200 dark:border-neutral-800">
-            <View className="flex-row gap-3 items-center">
-              <View className="flex-1">
-                <Text className="text-xs text-neutral-500">Toplam</Text>
-                <Text className="text-2xl font-bold text-primary-600">
-                  {totalKcal}{' '}
-                  <Text className="text-sm font-normal text-neutral-500">kcal</Text>
-                </Text>
-              </View>
+          {/* Sticky CTA + delete icon */}
+          <View style={s.ctaBar}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Pressable
                 onPress={() =>
                   Alert.alert('Sil', 'Bu yemeği silmek istediğine emin misin?', [
                     { text: 'İptal', style: 'cancel' },
-                    {
-                      text: 'Sil',
-                      style: 'destructive',
-                      onPress: () => remove.mutate(),
-                    },
+                    { text: 'Sil', style: 'destructive', onPress: () => remove.mutate() },
                   ])
                 }
                 disabled={remove.isPending}
-                className="h-12 w-12 rounded-xl bg-red-500/10 items-center justify-center"
+                style={({ pressed }) => [s.deleteIconBtn, pressed && { opacity: 0.7 }]}
               >
-                <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                {remove.isPending ? (
+                  <ActivityIndicator size="small" color={C.text2} />
+                ) : (
+                  <Ionicons name="trash-outline" size={20} color={C.text2} />
+                )}
               </Pressable>
-              <PressableButton
-                title={save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
+              <Pressable
                 onPress={() => save.mutate()}
-                loading={save.isPending}
-                className="flex-1"
-              />
+                disabled={save.isPending}
+                style={({ pressed }) => [s.cta, pressed && { transform: [{ scale: 0.99 }] }]}
+              >
+                {save.isPending ? (
+                  <ActivityIndicator color={onPrimary} />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={16} color={onPrimary} />
+                    <Text style={s.ctaText}>Logla · {totals.kcal} kcal</Text>
+                  </>
+                )}
+              </Pressable>
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -329,3 +451,420 @@ export default function MealDetailScreen() {
     </>
   );
 }
+
+function SliderTrack({ value, min, max }: { value: number; min: number; max: number }) {
+  const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  return (
+    <View style={s.sliderTrack}>
+      <View style={[s.sliderFill, { width: `${pct * 100}%` }]} />
+      <View style={[s.sliderThumb, { left: `${pct * 100}%` }]} />
+    </View>
+  );
+}
+
+function MacroCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <View
+      style={[
+        s.macroCard,
+        { borderColor: `${color}40`, backgroundColor: `${color}14` },
+      ]}
+    >
+      <Text style={[s.macroLabel, { color }]}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3, marginTop: 4 }}>
+        <Text style={s.macroValue}>{value}</Text>
+        <Text style={s.macroUnit}>g</Text>
+      </View>
+    </View>
+  );
+}
+
+function IngredientRow({
+  item,
+  onBump,
+  onDelete,
+  onNameChange,
+}: {
+  item: EditableItem;
+  onBump: (delta: number) => void;
+  onDelete: () => void;
+  onNameChange: (name: string) => void;
+}) {
+  return (
+    <View style={s.ingrRow}>
+      <View style={s.ingrTop}>
+        <View style={s.ingrDot} />
+        <TextInput
+          value={item.name}
+          onChangeText={onNameChange}
+          placeholder="Bileşen"
+          placeholderTextColor={C.text4}
+          style={s.ingrName}
+        />
+        <Pressable onPress={onDelete} hitSlop={8} style={s.ingrDeleteBtn}>
+          <Ionicons name="trash-outline" size={15} color={C.text4} />
+        </Pressable>
+      </View>
+      <View style={s.ingrBottom}>
+        <View style={s.gramStepper}>
+          <Pressable onPress={() => onBump(-5)} style={s.gramStepBtn} hitSlop={4}>
+            <Text style={s.gramStepText}>−</Text>
+          </Pressable>
+          <Text style={s.gramValue}>{item.grams ?? 0}g</Text>
+          <Pressable onPress={() => onBump(5)} style={s.gramStepBtn} hitSlop={4}>
+            <Text style={s.gramStepText}>+</Text>
+          </Pressable>
+        </View>
+        <Text style={s.ingrKcal}>{item.kcal} kcal</Text>
+      </View>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 12,
+  },
+  headerBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: C.whiteAlpha.a04,
+    borderWidth: 1,
+    borderColor: C.border2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.2 },
+  headerSub: { fontSize: 10, color: C.text3, marginTop: 2, letterSpacing: 0.4 },
+  aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(184, 240, 77, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(184, 240, 77, 0.32)',
+  },
+  aiBadgeText: { fontSize: 10.5, fontWeight: '700', color: C.lime, letterSpacing: 0.6 },
+
+  labelXs: {
+    fontSize: 10.5,
+    letterSpacing: 1.2,
+    color: C.text3,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+
+  // Hero
+  hero: {
+    height: 160,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.surface,
+    position: 'relative',
+  },
+  heroPhoto: { width: '100%', height: '100%' },
+  heroGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  heroBottom: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: 12,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: C.text,
+    letterSpacing: -0.3,
+    padding: 4,
+    marginHorizontal: -4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  heroKcalRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    marginTop: 2,
+  },
+  heroKcal: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: C.text,
+    lineHeight: 34,
+    letterSpacing: -0.6,
+  },
+  heroKcalLabel: { fontSize: 11, color: C.text3 },
+  heroChip: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  heroChipText: { fontSize: 10.5, fontWeight: '600', color: C.text },
+
+  warnBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(232, 193, 74, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 193, 74, 0.30)',
+  },
+
+  // Portion
+  portionCard: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border2,
+  },
+  portionHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  portionPer100: { fontSize: 11, color: C.text3 },
+  portionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  stepBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: C.whiteAlpha.a04,
+    borderWidth: 1,
+    borderColor: C.border2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBtnPrimary: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: C.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBtnText: { fontSize: 18, fontWeight: '600', color: C.text },
+  sliderTrack: {
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: C.whiteAlpha.a08,
+    position: 'relative',
+  },
+  sliderFill: {
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: C.lime,
+  },
+  sliderThumb: {
+    position: 'absolute',
+    top: -5,
+    width: 14,
+    height: 14,
+    marginLeft: -7,
+    borderRadius: 999,
+    backgroundColor: C.lime,
+    borderWidth: 2,
+    borderColor: C.bg,
+  },
+  portionValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 8,
+  },
+  portionValue: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: C.text,
+    letterSpacing: -0.4,
+  },
+  portionUnit: { fontSize: 11, color: C.text3 },
+
+  // Macros
+  macroGrid: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  macroCard: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  macroLabel: { fontSize: 9.5, fontWeight: '700', letterSpacing: 0.8 },
+  macroValue: { fontSize: 22, fontWeight: '600', color: C.text },
+  macroUnit: { fontSize: 11, color: C.text3 },
+
+  // Section
+  section: { marginTop: 16 },
+  sectionHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  addBtnText: { fontSize: 11, fontWeight: '600', color: C.lime },
+
+  // Ingredients — two-row layout so long names stay readable
+  ingrRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border2,
+    gap: 8,
+  },
+  ingrTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  ingrBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingLeft: 18,
+  },
+  ingrDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: C.lime,
+    flexShrink: 0,
+  },
+  ingrName: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: C.text,
+    padding: 0,
+    minWidth: 0,
+  },
+  ingrDeleteBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gramStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.whiteAlpha.a04,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: C.border2,
+    height: 30,
+  },
+  gramStepBtn: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gramStepText: { color: C.text2, fontSize: 16, fontWeight: '600' },
+  gramValue: {
+    minWidth: 42,
+    textAlign: 'center',
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: C.text,
+  },
+  ingrKcal: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.text2,
+  },
+
+  // Meal slot — soft lime tint when active, dark-theme friendly
+  slotBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border2,
+    alignItems: 'center',
+    gap: 6,
+  },
+  slotBtnActive: {
+    backgroundColor: 'rgba(184, 240, 77, 0.14)',
+    borderColor: C.lime,
+    borderWidth: 1.5,
+  },
+  slotLabel: { fontSize: 12, fontWeight: '600', color: C.text2 },
+  slotLabelActive: { color: C.lime, fontWeight: '700' },
+
+  // CTA bar
+  ctaBar: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+    borderTopWidth: 1,
+    borderTopColor: C.border2,
+    backgroundColor: 'rgba(21, 23, 28, 0.92)',
+  },
+  deleteIconBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cta: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: C.lime,
+    shadowColor: C.lime,
+    shadowOpacity: 0.5,
+    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  ctaText: { fontSize: 14, fontWeight: '700', color: onPrimary },
+});
