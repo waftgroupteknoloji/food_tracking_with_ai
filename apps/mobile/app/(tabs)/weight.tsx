@@ -1034,34 +1034,41 @@ function StreakRibbon({ streak }: { streak: number }) {
   const filled = Math.min(streak, 7);
   return (
     <View style={s.streakBox}>
-      <View
-        style={{
-          width: 38,
-          height: 38,
-          borderRadius: 10,
-          backgroundColor: 'rgba(184, 240, 77, 0.24)',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Ionicons name="flame" size={20} color={C.lime} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.4 }}>
-            {streak}
-          </Text>
-          <Text style={{ fontSize: 12, color: C.text2 }}>günlük seri</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            backgroundColor: 'rgba(184, 240, 77, 0.24)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <Ionicons name="flame" size={18} color={C.lime} />
         </View>
-        <Text style={{ fontSize: 10, color: C.text4, marginTop: 2 }}>her gün en az 1 kayıt</Text>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', columnGap: 5 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.4 }}>
+              {streak}
+            </Text>
+            <Text style={{ fontSize: 12, color: C.text2 }} numberOfLines={1}>
+              günlük seri
+            </Text>
+          </View>
+          <Text style={{ fontSize: 10, color: C.text4, marginTop: 1 }} numberOfLines={1}>
+            her gün en az 1 kayıt
+          </Text>
+        </View>
       </View>
-      <View style={{ flexDirection: 'row', gap: 4 }}>
+      <View style={{ flexDirection: 'row', gap: 4, marginTop: 8 }}>
         {Array.from({ length: 7 }).map((_, i) => (
           <View
             key={i}
             style={{
-              width: 6,
-              height: 6,
+              flex: 1,
+              height: 4,
               borderRadius: 999,
               backgroundColor: i < filled ? C.lime : 'rgba(255,255,255,0.18)',
             }}
@@ -1778,11 +1785,7 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   streakBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    paddingHorizontal: 14,
+    padding: 11,
     backgroundColor: C.surface,
     borderWidth: 1,
     borderColor: 'rgba(184, 240, 77, 0.22)',
