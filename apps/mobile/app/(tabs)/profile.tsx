@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ScrollView, Image, Dimensions } from 'react-native';
+import { View, Text, Pressable, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import type { Meal } from '@yemek-takip/validators';
 import { api, apiClient } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
+import { MealPhoto } from '@/components/meal-photo';
 import {
   calculateBMI,
   bmiCategory,
@@ -143,25 +144,10 @@ export default function ProfileScreen() {
                   style={{ width: ITEM_SIZE, height: ITEM_SIZE }}
                   className="rounded-md overflow-hidden bg-neutral-100 dark:bg-neutral-800"
                 >
-                  {m.photoUrl ? (
-                    <Image
-                      source={{ uri: m.photoUrl }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View
-                      style={{ width: '100%', height: '100%', padding: 4 }}
-                      className="items-center justify-center"
-                    >
-                      <Text
-                        className="text-[10px] text-neutral-500 text-center"
-                        numberOfLines={3}
-                      >
-                        {m.items[0]?.name ?? 'Yazı'}
-                      </Text>
-                    </View>
-                  )}
+                  <MealPhoto
+                    photoUrl={m.photoUrl}
+                    style={{ width: '100%', height: '100%' }}
+                  />
                   <View
                     style={{
                       position: 'absolute',

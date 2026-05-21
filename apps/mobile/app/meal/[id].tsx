@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  Image,
   Pressable,
   TouchableOpacity,
   TextInput,
@@ -22,6 +21,7 @@ import { ApiError } from '@yemek-takip/api-client';
 import type { Meal, MealType, MealItem } from '@yemek-takip/validators';
 import { api } from '@/lib/api';
 import { C, onPrimary } from '@/lib/theme';
+import { MealPhoto } from '@/components/meal-photo';
 
 const MEAL_SLOTS: {
   value: MealType;
@@ -266,11 +266,7 @@ export default function MealDetailScreen() {
           >
             {/* Hero photo */}
             <View style={s.hero}>
-              {meal.photoUrl ? (
-                <Image source={{ uri: meal.photoUrl }} style={s.heroPhoto} resizeMode="cover" />
-              ) : (
-                <View style={[s.heroPhoto, { backgroundColor: C.surface2 }]} />
-              )}
+              <MealPhoto photoUrl={meal.photoUrl} style={s.heroPhoto} />
               <LinearGradient
                 colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.78)']}
                 locations={[0.3, 1]}

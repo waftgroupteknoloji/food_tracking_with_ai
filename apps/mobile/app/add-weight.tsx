@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError } from '@yemek-takip/api-client';
 import { api } from '@/lib/api';
@@ -73,7 +74,14 @@ export default function AddWeightScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: 'Kilo ekle' }} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'Kilo ekle',
+          headerBackTitle: 'Geri',
+          headerBackButtonDisplayMode: 'minimal',
+        }}
+      />
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -122,14 +130,16 @@ export default function AddWeightScreen() {
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <Pressable
                     onPress={() => selectPhoto('camera')}
-                    style={({ pressed }) => [s.photoBtn, pressed && { opacity: 0.85 }]}
+                    android_ripple={{ color: 'rgba(184,240,77,0.10)' }}
+                    style={s.photoBtn}
                   >
                     <Ionicons name="camera-outline" size={20} color={C.lime} />
                     <Text style={s.photoBtnText}>Çek</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => selectPhoto('library')}
-                    style={({ pressed }) => [s.photoBtn, pressed && { opacity: 0.85 }]}
+                    android_ripple={{ color: 'rgba(184,240,77,0.10)' }}
+                    style={s.photoBtn}
                   >
                     <Ionicons name="images-outline" size={20} color={C.lime} />
                     <Text style={s.photoBtnText}>Galeri</Text>
@@ -162,25 +172,30 @@ export default function AddWeightScreen() {
             <Pressable
               onPress={() => canSubmit && save.mutate()}
               disabled={!canSubmit}
-              style={({ pressed }) => [
-                s.primaryBtn,
-                !canSubmit && { opacity: 0.5 },
-                pressed && canSubmit && { opacity: 0.9 },
-              ]}
+              style={[s.primaryBtn, !canSubmit && { opacity: 0.5 }]}
             >
-              {isBusy ? (
-                <>
-                  <ActivityIndicator size="small" color={onPrimary} />
-                  <Text style={s.primaryBtnText}>
-                    {uploading ? 'Foto yükleniyor…' : 'Kaydediliyor…'}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="checkmark" size={18} color={onPrimary} />
-                  <Text style={s.primaryBtnText}>Kaydet</Text>
-                </>
-              )}
+              <LinearGradient
+                colors={['#e4ff8a', '#b8f04d', '#9bd03a']}
+                locations={[0, 0.55, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.primaryBtnInner}
+              >
+                {isBusy ? (
+                  <>
+                    <ActivityIndicator size="small" color={onPrimary} />
+                    <Text style={s.primaryBtnText}>
+                      {uploading ? 'Foto yükleniyor…' : 'Kaydediliyor…'}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={18} color={onPrimary} />
+                    <Text style={s.primaryBtnText}>Kaydet</Text>
+                    <Ionicons name="arrow-forward" size={18} color={onPrimary} />
+                  </>
+                )}
+              </LinearGradient>
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -256,23 +271,26 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
   primaryBtn: {
+    borderRadius: 16,
+    marginTop: 8,
+    shadowColor: C.lime,
+    shadowOpacity: 0.45,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 20,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  primaryBtnInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    height: 50,
-    backgroundColor: C.lime,
-    borderRadius: 14,
-    marginTop: 4,
-    shadowColor: C.lime,
-    shadowOpacity: 0.35,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 14,
-    elevation: 5,
+    gap: 10,
+    height: 58,
+    paddingHorizontal: 20,
   },
   primaryBtnText: {
     color: onPrimary,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
   },

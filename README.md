@@ -46,3 +46,6 @@ packages/
 ```
 
 See [plan file](https://...) for full design.
+
+
+Pressable function-style quirk, layout bozuk

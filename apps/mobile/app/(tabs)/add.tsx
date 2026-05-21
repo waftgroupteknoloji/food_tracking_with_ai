@@ -71,6 +71,7 @@ export default function AddScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
       <ScrollView
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
@@ -83,8 +84,8 @@ export default function AddScreen() {
           />
         </View>
 
-        <View style={{ paddingHorizontal: 16, gap: 12 }}>
-          <Text style={[s.labelXs, { paddingTop: 2 }]}>YA DA HIZLI EKLE</Text>
+        <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+          <Text style={[s.labelXs, { paddingTop: 2, marginBottom: 12 }]}>YA DA HIZLI EKLE</Text>
           <QuickAddGrid
             onPressText={() => router.push('/add-meal-text')}
             onPressActivity={() => router.push('/add-activity')}
@@ -284,7 +285,8 @@ function QuickAddGrid({
         <Pressable
           key={q.label}
           onPress={q.onPress}
-          style={({ pressed }) => [s.quickTile, pressed && { opacity: 0.85 }]}
+          android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+          style={s.quickTile}
         >
           <View style={[s.quickIcon, { backgroundColor: q.tint }]}>
             <Ionicons name={q.icon} size={18} color={q.color} />

@@ -1,10 +1,11 @@
-import { View, Text, ScrollView, Pressable, Image, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { CalorieRing } from '@/components/calorie-ring';
+import { MealPhoto } from '@/components/meal-photo';
 
 export default function HistoryDateScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
@@ -69,17 +70,7 @@ export default function HistoryDateScreen() {
                   onPress={() => router.push(`/meal/${m._id}`)}
                   className="flex-row items-center gap-3 p-2 rounded-xl border border-neutral-200 dark:border-neutral-800"
                 >
-                  {m.photoUrl ? (
-                    <Image
-                      source={{ uri: m.photoUrl }}
-                      className="w-12 h-12 rounded-md"
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View className="w-12 h-12 rounded-md bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
-                      <Ionicons name="document-text-outline" size={18} color="#9ca3af" />
-                    </View>
-                  )}
+                  <MealPhoto photoUrl={m.photoUrl} className="w-12 h-12 rounded-md" />
                   <View className="flex-1">
                     <Text className="font-medium text-neutral-900 dark:text-neutral-100">
                       {m.items[0]?.name ?? 'Yemek'}

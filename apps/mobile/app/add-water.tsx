@@ -36,7 +36,14 @@ export default function AddWaterScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: 'Su' }} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'Su',
+          headerBackTitle: 'Geri',
+          headerBackButtonDisplayMode: 'minimal',
+        }}
+      />
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['bottom']}>
         <ScrollView contentContainerStyle={{ padding: 18, gap: 18, paddingBottom: 40 }}>
           <View style={s.heroCard}>
@@ -56,25 +63,25 @@ export default function AddWaterScreen() {
             </Text>
           </View>
 
-          <View style={{ gap: 8 }}>
-            <Text style={s.sectionLabel}>HIZLI EKLE</Text>
+          <View style={{ gap: 10 }}>
+            <View style={s.sectionHead}>
+              <Text style={s.sectionLabel}>HIZLI EKLE</Text>
+              <Text style={s.sectionHint}>Dokun → anında kaydedilir</Text>
+            </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {QUICK_AMOUNTS.map((amount) => (
                 <Pressable
                   key={amount}
                   onPress={() => add.mutate(amount)}
                   disabled={add.isPending}
-                  style={({ pressed }) => [
-                    s.amountBtn,
-                    pressed && { opacity: 0.85 },
-                    add.isPending && { opacity: 0.5 },
-                  ]}
+                  android_ripple={{ color: 'rgba(126,200,224,0.15)' }}
+                  style={[s.amountBtn, add.isPending && { opacity: 0.5 }]}
                 >
-                  <Ionicons name="water" size={22} color={C.cyan} />
-                  <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, marginTop: 4 }}>
-                    {amount}
-                  </Text>
-                  <Text style={{ color: C.text3, fontSize: 10 }}>ml</Text>
+                  <View style={s.amountIconBox}>
+                    <Ionicons name="water" size={22} color={C.cyan} />
+                  </View>
+                  <Text style={s.amountValue}>{amount}</Text>
+                  <Text style={s.amountUnit}>ml</Text>
                 </Pressable>
               ))}
             </View>
@@ -141,20 +148,54 @@ const s = StyleSheet.create({
     backgroundColor: C.cyan,
     borderRadius: 999,
   },
+  sectionHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
   sectionLabel: {
     fontSize: 10.5,
     letterSpacing: 1.2,
     color: C.text3,
     fontWeight: '600',
   },
+  sectionHint: {
+    fontSize: 10.5,
+    color: C.text4,
+    fontWeight: '500',
+  },
   amountBtn: {
     width: '31%',
-    paddingVertical: 14,
+    paddingVertical: 16,
     backgroundColor: 'rgba(126,200,224,0.08)',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(126,200,224,0.25)',
     alignItems: 'center',
+    gap: 6,
+    overflow: 'hidden',
+  },
+  amountIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: 'rgba(126,200,224,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(126,200,224,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  amountValue: {
+    color: C.text,
+    fontWeight: '700',
+    fontSize: 16,
+    marginTop: 2,
+    letterSpacing: -0.3,
+  },
+  amountUnit: {
+    color: C.text3,
+    fontSize: 11,
+    fontWeight: '500',
   },
   entryRow: {
     flexDirection: 'row',

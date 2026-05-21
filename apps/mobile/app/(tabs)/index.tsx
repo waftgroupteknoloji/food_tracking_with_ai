@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, Image, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { CalorieRing } from '@/components/calorie-ring';
+import { MealPhoto } from '@/components/meal-photo';
 import { todayLocalDate } from '@yemek-takip/utils';
 
 export default function DashboardScreen() {
@@ -134,17 +135,7 @@ export default function DashboardScreen() {
                 onPress={() => router.push(`/meal/${m._id}`)}
                 className="flex-row items-center gap-3 p-2 rounded-xl border border-neutral-200 dark:border-neutral-800"
               >
-                {m.photoUrl ? (
-                  <Image
-                    source={{ uri: m.photoUrl }}
-                    className="w-14 h-14 rounded-lg"
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View className="w-14 h-14 rounded-lg bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
-                    <Ionicons name="document-text-outline" size={20} color="#9ca3af" />
-                  </View>
-                )}
+                <MealPhoto photoUrl={m.photoUrl} className="w-14 h-14 rounded-lg" />
                 <View className="flex-1">
                   <Text
                     className="font-medium text-neutral-900 dark:text-neutral-100"

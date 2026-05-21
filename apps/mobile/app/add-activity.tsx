@@ -14,18 +14,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError } from '@yemek-takip/api-client';
 import { api } from '@/lib/api';
-import { C, onPrimary } from '@/lib/theme';
+import { C } from '@/lib/theme';
 
-const SUGGESTIONS = [
-  '1 saat yürüyüş',
-  '30 dk koşu',
-  '45 dk bisiklet',
-  '20 dk yüzme',
-  '1 saat pilates',
-  '45 dk salon, ağırlık',
+const SUGGESTIONS: { emoji: string; text: string }[] = [
+  { emoji: '🚶', text: '1 saat yürüyüş' },
+  { emoji: '🏃', text: '30 dk koşu' },
+  { emoji: '🚴', text: '45 dk bisiklet' },
+  { emoji: '🏊', text: '20 dk yüzme' },
+  { emoji: '🧘', text: '1 saat pilates' },
+  { emoji: '🏋️', text: '45 dk salon, ağırlık' },
 ];
 
 export default function AddActivityScreen() {
@@ -48,7 +49,14 @@ export default function AddActivityScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: 'Aktivite ekle' }} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'Aktivite ekle',
+          headerBackTitle: 'Geri',
+          headerBackButtonDisplayMode: 'minimal',
+        }}
+      />
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -111,17 +119,30 @@ export default function AddActivityScreen() {
               </View>
             </View>
 
-            <View style={{ gap: 8 }}>
-              <Text style={s.sectionLabel}>HIZLI ÖRNEKLER</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <View style={{ gap: 10 }}>
+              <View style={s.sectionHead}>
+                <Text style={s.sectionLabel}>HIZLI ÖRNEKLER</Text>
+                <Text style={s.sectionHint}>Dokun → metne eklenir</Text>
+              </View>
+              <View style={{ gap: 8 }}>
                 {SUGGESTIONS.map((sug) => (
                   <Pressable
-                    key={sug}
-                    onPress={() => setText((prev) => (prev ? `${prev}, ${sug}` : sug))}
-                    style={({ pressed }) => [s.suggChip, pressed && { opacity: 0.7 }]}
+                    key={sug.text}
+                    onPress={() =>
+                      setText((prev) => (prev ? `${prev}, ${sug.text}` : sug.text))
+                    }
+                    android_ripple={{ color: 'rgba(240,141,106,0.10)' }}
+                    style={s.suggCard}
                   >
-                    <Ionicons name="add" size={12} color={C.coral} />
-                    <Text style={{ fontSize: 12, color: C.text2, fontWeight: '500' }}>{sug}</Text>
+                    <View style={s.suggEmojiBox}>
+                      <Text style={{ fontSize: 18 }}>{sug.emoji}</Text>
+                    </View>
+                    <Text style={s.suggText} numberOfLines={2}>
+                      {sug.text}
+                    </Text>
+                    <View style={s.suggAddBtn}>
+                      <Ionicons name="add" size={16} color={C.coral} />
+                    </View>
                   </Pressable>
                 ))}
               </View>
@@ -130,23 +151,28 @@ export default function AddActivityScreen() {
             <Pressable
               onPress={() => canSubmit && mutation.mutate(text.trim())}
               disabled={!canSubmit}
-              style={({ pressed }) => [
-                s.primaryBtn,
-                !canSubmit && { opacity: 0.5 },
-                pressed && canSubmit && { opacity: 0.9 },
-              ]}
+              style={[s.primaryBtn, !canSubmit && { opacity: 0.5 }]}
             >
-              {mutation.isPending ? (
-                <>
-                  <ActivityIndicator size="small" color="#fff" />
-                  <Text style={s.primaryBtnText}>AI hesaplıyor…</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="sparkles" size={16} color="#fff" />
-                  <Text style={s.primaryBtnText}>Analiz et ve kaydet</Text>
-                </>
-              )}
+              <LinearGradient
+                colors={['#ffb89c', '#f08d6a', '#d97354']}
+                locations={[0, 0.55, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.primaryBtnInner}
+              >
+                {mutation.isPending ? (
+                  <>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <Text style={s.primaryBtnText}>AI hesaplıyor…</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="sparkles" size={18} color="#fff" />
+                    <Text style={s.primaryBtnText}>Analiz et ve kaydet</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#fff" />
+                  </>
+                )}
+              </LinearGradient>
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -207,41 +233,82 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: C.border2,
   },
+  sectionHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
   sectionLabel: {
     fontSize: 10.5,
     letterSpacing: 1.2,
     color: C.text3,
     fontWeight: '600',
   },
-  suggChip: {
+  sectionHint: {
+    fontSize: 10.5,
+    color: C.text4,
+    fontWeight: '500',
+  },
+  suggCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    backgroundColor: C.surface2,
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: C.surface,
     borderWidth: 1,
     borderColor: C.border2,
-    borderRadius: 999,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  suggEmojiBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: 'rgba(240,141,106,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(240,141,106,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suggText: {
+    flex: 1,
+    fontSize: 13,
+    color: C.text,
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  suggAddBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: 'rgba(240,141,106,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(240,141,106,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryBtn: {
+    borderRadius: 16,
+    marginTop: 8,
+    shadowColor: C.coral,
+    shadowOpacity: 0.45,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 20,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  primaryBtnInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    height: 50,
-    backgroundColor: C.coral,
-    borderRadius: 14,
-    marginTop: 4,
-    shadowColor: C.coral,
-    shadowOpacity: 0.35,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 14,
-    elevation: 5,
+    gap: 10,
+    height: 58,
+    paddingHorizontal: 20,
   },
   primaryBtnText: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
   },

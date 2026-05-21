@@ -4,7 +4,6 @@ import {
   Text,
   Pressable,
   ScrollView,
-  Image,
   RefreshControl,
   StyleSheet,
   LayoutAnimation,
@@ -19,6 +18,7 @@ import { api } from '@/lib/api';
 import { addDaysToLocal, todayLocalDate } from '@yemek-takip/utils';
 import type { DailyStats, Meal } from '@yemek-takip/validators';
 import { C } from '@/lib/theme';
+import { MealPhoto } from '@/components/meal-photo';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -62,7 +62,6 @@ interface TimelineMeal {
   id: string;
   name: string;
   kind: string;
-  hue: number;
   kcal: number;
   p: number;
   c: number;
@@ -118,12 +117,6 @@ function fmtFull(d: Date) {
   return `${TR_DAYS_LONG[d.getDay()]}, ${d.getDate()} ${TR_MONTHS[d.getMonth()]}`;
 }
 
-function hueFromString(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
-  return h;
-}
-
 function macroGoalsFromKcal(target: number) {
   return {
     protein: Math.round((target * 0.3) / 4),
@@ -156,7 +149,6 @@ function dayShapeFromStats(date: string, stats: DailyStats | undefined, today: s
       id: m._id,
       name: `${firstName}${extra}`,
       kind: m.mealType ? KIND_LABEL[m.mealType] : 'Öğün',
-      hue: hueFromString(firstName),
       kcal: Math.round(m.totalKcal),
       p: Math.round(macros.p),
       c: Math.round(macros.c),
@@ -565,27 +557,7 @@ function MealRow({ meal, onPress }: { meal: TimelineMeal; onPress: () => void })
       style={({ pressed }) => [s.mealCard, { opacity: pressed ? 0.9 : 1 }]}
     >
       <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-        {meal.photoUrl ? (
-          <Image
-            source={{ uri: meal.photoUrl }}
-            style={s.mealPhoto}
-            resizeMode="cover"
-          />
-        ) : (
-          <View
-            style={[
-              s.mealPhoto,
-              {
-                backgroundColor: `hsl(${meal.hue}, 38%, 36%)`,
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-              },
-            ]}
-          >
-            <Ionicons name="restaurant" size={24} color="rgba(255,255,255,0.7)" />
-          </View>
-        )}
+        <MealPhoto photoUrl={meal.photoUrl} style={s.mealPhoto} />
 
         <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
           <Text style={s.mealName} numberOfLines={1}>
