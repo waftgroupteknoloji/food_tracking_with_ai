@@ -5,6 +5,7 @@ import {
   ScrollView,
   Image,
   Pressable,
+  TouchableOpacity,
   TextInput,
   Alert,
   ActivityIndicator,
@@ -22,11 +23,31 @@ import type { Meal, MealType, MealItem } from '@yemek-takip/validators';
 import { api } from '@/lib/api';
 import { C, onPrimary } from '@/lib/theme';
 
-const MEAL_SLOTS: { value: MealType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'breakfast', label: 'Kahvaltı', icon: 'cafe-outline' },
-  { value: 'lunch', label: 'Öğle', icon: 'sunny-outline' },
-  { value: 'snack', label: 'Atıştırma', icon: 'leaf-outline' },
-  { value: 'dinner', label: 'Akşam', icon: 'moon-outline' },
+const MEAL_SLOTS: {
+  value: MealType;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  bgNormal: string;
+  bgActive: string;
+  borderNormal: string;
+}[] = [
+  {
+    value: 'breakfast', label: 'Kahvaltı', icon: 'cafe-outline', color: C.amber,
+    bgNormal: 'rgba(232,193,74,0.15)', bgActive: 'rgba(232,193,74,0.55)', borderNormal: 'rgba(232,193,74,0.4)',
+  },
+  {
+    value: 'lunch', label: 'Öğle', icon: 'sunny-outline', color: C.lime,
+    bgNormal: 'rgba(184,240,77,0.15)', bgActive: 'rgba(184,240,77,0.55)', borderNormal: 'rgba(184,240,77,0.4)',
+  },
+  {
+    value: 'snack', label: 'Atıştırma', icon: 'leaf-outline', color: C.cyan,
+    bgNormal: 'rgba(126,200,224,0.15)', bgActive: 'rgba(126,200,224,0.55)', borderNormal: 'rgba(126,200,224,0.4)',
+  },
+  {
+    value: 'dinner', label: 'Akşam', icon: 'moon-outline', color: C.coral,
+    bgNormal: 'rgba(240,141,106,0.15)', bgActive: 'rgba(240,141,106,0.55)', borderNormal: 'rgba(240,141,106,0.4)',
+  },
 ];
 
 const PORTION_MIN = 20;
@@ -238,6 +259,7 @@ export default function MealDetailScreen() {
           </View>
 
           <ScrollView
+            style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28 }}
             keyboardShouldPersistTaps="handled"
@@ -381,26 +403,22 @@ export default function MealDetailScreen() {
             {/* Meal slot */}
             <View style={s.section}>
               <Text style={[s.labelXs, { marginBottom: 10 }]}>ÖĞÜN</Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={s.slotRow}>
                 {MEAL_SLOTS.map((slot) => {
                   const active = mealType === slot.value;
                   return (
                     <Pressable
                       key={slot.value}
                       onPress={() => setMealType(active ? undefined : slot.value)}
-                      android_ripple={{ color: 'rgba(184, 240, 77, 0.12)' }}
-                      style={({ pressed }) => [
-                        s.slotBtn,
-                        active && s.slotBtnActive,
-                        pressed && !active && { backgroundColor: C.surface2 },
+                      style={[
+                        s.slotCard,
+                        { backgroundColor: active ? slot.bgActive : slot.bgNormal },
+                        { borderColor: active ? slot.color : slot.borderNormal },
+                        active && { borderWidth: 2.5, transform: [{ scale: 1.04 }] },
                       ]}
                     >
-                      <Ionicons
-                        name={slot.icon}
-                        size={20}
-                        color={active ? C.lime : C.text2}
-                      />
-                      <Text style={[s.slotLabel, active && s.slotLabelActive]}>
+                      <Ionicons name={slot.icon} size={22} color={slot.color} />
+                      <Text style={[s.slotCardLabel, { color: active ? slot.color : C.text2 }]} numberOfLines={1}>
                         {slot.label}
                       </Text>
                     </Pressable>
@@ -411,40 +429,105 @@ export default function MealDetailScreen() {
 
           </ScrollView>
 
-          {/* Sticky CTA + delete icon */}
-          <View style={s.ctaBar}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Pressable
-                onPress={() =>
-                  Alert.alert('Sil', 'Bu yemeği silmek istediğine emin misin?', [
-                    { text: 'İptal', style: 'cancel' },
-                    { text: 'Sil', style: 'destructive', onPress: () => remove.mutate() },
-                  ])
-                }
-                disabled={remove.isPending}
-                style={({ pressed }) => [s.deleteIconBtn, pressed && { opacity: 0.7 }]}
-              >
-                {remove.isPending ? (
-                  <ActivityIndicator size="small" color={C.text2} />
-                ) : (
-                  <Ionicons name="trash-outline" size={20} color={C.text2} />
-                )}
-              </Pressable>
-              <Pressable
-                onPress={() => save.mutate()}
-                disabled={save.isPending}
-                style={({ pressed }) => [s.cta, pressed && { transform: [{ scale: 0.99 }] }]}
-              >
-                {save.isPending ? (
-                  <ActivityIndicator color={onPrimary} />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark" size={16} color={onPrimary} />
-                    <Text style={s.ctaText}>Logla · {totals.kcal} kcal</Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
+          {/* Sticky action bar: red delete + green confirm */}
+          <View
+            style={{
+              width: '100%',
+              flexDirection: 'row',
+              paddingHorizontal: 16,
+              paddingTop: 14,
+              paddingBottom: 20,
+              borderTopWidth: 1,
+              borderTopColor: '#272930',
+              backgroundColor: '#15171c',
+            }}
+          >
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() =>
+                Alert.alert('Sil', 'Bu yemeği silmek istediğine emin misin?', [
+                  { text: 'İptal', style: 'cancel' },
+                  { text: 'Sil', style: 'destructive', onPress: () => remove.mutate() },
+                ])
+              }
+              disabled={remove.isPending}
+              style={{
+                flex: 1,
+                marginRight: 6,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: 56,
+                borderRadius: 14,
+                backgroundColor: '#e54848',
+              }}
+            >
+              {remove.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={20} color="#fff" />
+                  <Text
+                    style={{
+                      marginLeft: 8,
+                      fontSize: 16,
+                      fontWeight: '700',
+                      color: '#fff',
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    Sil
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => save.mutate()}
+              disabled={save.isPending}
+              style={{
+                flex: 1,
+                marginLeft: 6,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: 56,
+                borderRadius: 14,
+                backgroundColor: '#b8f04d',
+              }}
+            >
+              {save.isPending ? (
+                <ActivityIndicator color="#0a0d12" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark" size={20} color="#0a0d12" />
+                  <View style={{ marginLeft: 8, alignItems: 'center' }}>
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: '700',
+                        color: '#0a0d12',
+                        letterSpacing: 0.3,
+                        lineHeight: 18,
+                      }}
+                    >
+                      Kaydet
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '600',
+                        color: '#0a0d12',
+                        opacity: 0.7,
+                        marginTop: 1,
+                      }}
+                    >
+                      ({totals.kcal} kcal)
+                    </Text>
+                  </View>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -813,27 +896,30 @@ const s = StyleSheet.create({
   },
 
   // Meal slot — soft lime tint when active, dark-theme friendly
-  slotBtn: {
+  slotRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  slotCard: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 4,
     borderRadius: 14,
-    backgroundColor: C.surface,
-    borderWidth: 1,
-    borderColor: C.border2,
+    borderWidth: 1.5,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
   },
-  slotBtnActive: {
-    backgroundColor: 'rgba(184, 240, 77, 0.14)',
-    borderColor: C.lime,
-    borderWidth: 1.5,
+  slotCardLabel: {
+    fontSize: 11,
+    fontWeight: '600',
   },
-  slotLabel: { fontSize: 12, fontWeight: '600', color: C.text2 },
-  slotLabelActive: { color: C.lime, fontWeight: '700' },
 
-  // CTA bar
+  // CTA bar — two equal buttons filling page width
   ctaBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 18,
@@ -841,30 +927,36 @@ const s = StyleSheet.create({
     borderTopColor: C.border2,
     backgroundColor: 'rgba(21, 23, 28, 0.92)',
   },
-  deleteIconBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: C.surface,
-    borderWidth: 1,
-    borderColor: C.border2,
+  deleteBtn: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: '#e54848',
+    shadowColor: '#e54848',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 20,
+    elevation: 6,
   },
+  deleteBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', letterSpacing: 0.3 },
   cta: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    height: 52,
+    height: 56,
     borderRadius: 14,
     backgroundColor: C.lime,
     shadowColor: C.lime,
     shadowOpacity: 0.5,
-    shadowOffset: { width: 0, height: 12 },
-    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 20,
     elevation: 8,
   },
-  ctaText: { fontSize: 14, fontWeight: '700', color: onPrimary },
+  ctaText: { fontSize: 15, fontWeight: '700', color: onPrimary, letterSpacing: 0.3 },
 });
