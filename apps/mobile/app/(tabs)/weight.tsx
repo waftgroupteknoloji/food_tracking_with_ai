@@ -1517,52 +1517,75 @@ function AddWeightSheet({
                 marginTop: 22,
               }}
             >
-              <Pressable
-                onPress={onClose}
-                disabled={saving}
-                style={({ pressed }) => [
-                  {
-                    flex: 1,
-                    height: 46,
-                    borderRadius: 12,
+              <View style={{ flex: 1 }}>
+                <Pressable
+                  onPress={onClose}
+                  disabled={saving}
+                  android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+                  style={{
+                    height: 52,
+                    borderRadius: 14,
                     borderWidth: 1,
                     borderColor: C.border,
                     backgroundColor: C.surface2,
                     alignItems: 'center',
                     justifyContent: 'center',
-                  },
-                  pressed && { opacity: 0.85 },
-                ]}
-              >
-                <Text style={{ color: C.text, fontWeight: '600', fontSize: 14 }}>Vazgeç</Text>
-              </Pressable>
-              <Pressable
-                onPress={handleSave}
-                disabled={saving}
-                style={({ pressed }) => [
-                  {
-                    flex: 1,
-                    height: 46,
-                    borderRadius: 12,
-                    backgroundColor: C.lime,
                     flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                     gap: 6,
-                    shadowColor: C.lime,
-                    shadowOpacity: 0.4,
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowRadius: 14,
-                    elevation: 5,
-                  },
-                  (pressed || saving) && { opacity: 0.9 },
-                ]}
+                  }}
+                >
+                  <Ionicons name="close" size={16} color={C.text2} />
+                  <Text style={{ color: C.text, fontWeight: '600', fontSize: 14 }}>Vazgeç</Text>
+                </Pressable>
+              </View>
+              <View
+                style={{
+                  flex: 1.4,
+                  borderRadius: 14,
+                  overflow: 'hidden',
+                  shadowColor: C.lime,
+                  shadowOpacity: 0.45,
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowRadius: 16,
+                  elevation: 8,
+                }}
               >
-                <Ionicons name="checkmark" size={17} color={onPrimary} />
-                <Text style={{ color: onPrimary, fontWeight: '700', fontSize: 14 }}>
-                  {saving ? 'Kaydediliyor…' : 'Kaydet'}
-                </Text>
-              </Pressable>
+                <Pressable
+                  onPress={handleSave}
+                  disabled={saving}
+                  android_ripple={{ color: 'rgba(0,0,0,0.10)' }}
+                  style={{ opacity: saving ? 0.75 : 1 }}
+                >
+                  <Gradient
+                    colors={['#e4ff8a', '#b8f04d', '#9bd03a']}
+                    locations={[0, 0.55, 1]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      height: 52,
+                      borderRadius: 14,
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(255,255,255,0.5)',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <Ionicons name="checkmark" size={18} color={onPrimary} />
+                    <Text
+                      style={{
+                        color: onPrimary,
+                        fontWeight: '700',
+                        fontSize: 15,
+                        letterSpacing: -0.2,
+                      }}
+                    >
+                      {saving ? 'Kaydediliyor…' : 'Kaydet'}
+                    </Text>
+                  </Gradient>
+                </Pressable>
+              </View>
             </View>
           </Pressable>
         </KeyboardAvoidingView>
