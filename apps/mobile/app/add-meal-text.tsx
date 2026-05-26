@@ -15,10 +15,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@yemek-takip/api-client';
+import type { CoinBalance } from '@yemek-takip/validators';
 import { api } from '@/lib/api';
 import { C, onPrimary } from '@/lib/theme';
+import { CoinInsufficientSheet } from '@/components/coin-insufficient-sheet';
+import { COIN_BALANCE_QUERY_KEY } from '@/components/coin-badge';
 
 const SUGGESTIONS: { emoji: string; text: string }[] = [
   { emoji: '🍳', text: '3 yumurta, 2 dilim beyaz ekmek, biraz peynir' },
@@ -30,8 +33,16 @@ const SUGGESTIONS: { emoji: string; text: string }[] = [
 
 export default function AddMealTextScreen() {
   const router = useRouter();
+  const qc = useQueryClient();
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
+  const [showInsufficient, setShowInsufficient] = useState(false);
+
+  const hasCoinForAnalysis = () => {
+    const data = qc.getQueryData<CoinBalance>(COIN_BALANCE_QUERY_KEY);
+    if (!data) return true;
+    return data.hasActiveSubscription || data.coins >= 1;
+  };
 
   const mutation = useMutation({
     mutationFn: (inputText: string) =>
@@ -40,9 +51,24 @@ export default function AddMealTextScreen() {
         consumedAt: new Date().toISOString(),
       }),
     onSuccess: (m) => router.replace(`/meal/${m._id}?fresh=1`),
-    onError: (err) =>
-      Alert.alert('Hata', err instanceof ApiError ? err.message : 'Bilinmeyen hata'),
+    onError: (err) => {
+      if (err instanceof ApiError && err.code === 'INSUFFICIENT_COINS') {
+        setShowInsufficient(true);
+        return;
+      }
+      Alert.alert('Hata', err instanceof ApiError ? err.message : 'Bilinmeyen hata');
+    },
   });
+
+  const submit = () => {
+    const value = text.trim();
+    if (!value) return;
+    if (!hasCoinForAnalysis()) {
+      setShowInsufficient(true);
+      return;
+    }
+    mutation.mutate(value);
+  };
 
   const canSubmit = text.trim().length > 0 && !mutation.isPending;
 
@@ -148,7 +174,7 @@ export default function AddMealTextScreen() {
             </View>
 
             <Pressable
-              onPress={() => canSubmit && mutation.mutate(text.trim())}
+              onPress={() => canSubmit && submit()}
               disabled={!canSubmit}
               style={[s.primaryBtn, !canSubmit && { opacity: 0.5 }]}
             >
@@ -175,6 +201,15 @@ export default function AddMealTextScreen() {
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
+        <CoinInsufficientSheet
+          visible={showInsufficient}
+          onClose={() => setShowInsufficient(false)}
+          onAdRewardSuccess={() => {
+            setShowInsufficient(false);
+            const value = text.trim();
+            if (value) mutation.mutate(value);
+          }}
+        />
       </SafeAreaView>
     </>
   );

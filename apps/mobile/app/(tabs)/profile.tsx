@@ -7,6 +7,7 @@ import type { Meal } from '@yemek-takip/validators';
 import { api, apiClient } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { MealPhoto } from '@/components/meal-photo';
+import { CoinBadge } from '@/components/coin-badge';
 import {
   calculateBMI,
   bmiCategory,
@@ -56,6 +57,9 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950" edges={['top']}>
+      <View style={{ position: 'absolute', top: 12, right: 16, zIndex: 10 }}>
+        <CoinBadge />
+      </View>
       <ScrollView contentContainerClassName="pb-28">
         <View className="px-4 pt-2 pb-4 flex-row items-center gap-4">
           <View className="w-20 h-20 rounded-full bg-primary-100 dark:bg-primary-900/30 items-center justify-center">

@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@yemek-takip/api-client';
+import type { CoinBalance } from '@yemek-takip/validators';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { CoinInsufficientModal } from '@/components/coin-insufficient-modal';
+import { COIN_BALANCE_QUERY_KEY } from '@/components/coin-badge';
 
 const SUGGESTIONS = [
   '1 saat yürüyüş',
@@ -20,8 +23,16 @@ const SUGGESTIONS = [
 
 export default function AddActivityPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showInsufficient, setShowInsufficient] = useState(false);
+
+  const hasCoinForAnalysis = () => {
+    const data = qc.getQueryData<CoinBalance>(COIN_BALANCE_QUERY_KEY);
+    if (!data) return true;
+    return data.hasActiveSubscription || data.coins >= 1;
+  };
 
   const mutation = useMutation({
     mutationFn: (inputText: string) =>
@@ -30,8 +41,23 @@ export default function AddActivityPage() {
         performedAt: new Date().toISOString(),
       }),
     onSuccess: (a) => router.replace(`/activity/${a._id}`),
-    onError: (err) => setError(err instanceof ApiError ? err.message : 'Hata'),
+    onError: (err) => {
+      if (err instanceof ApiError && err.code === 'INSUFFICIENT_COINS') {
+        setShowInsufficient(true);
+        return;
+      }
+      setError(err instanceof ApiError ? err.message : 'Hata');
+    },
   });
+
+  const submit = () => {
+    setError(null);
+    if (!hasCoinForAnalysis()) {
+      setShowInsufficient(true);
+      return;
+    }
+    mutation.mutate(text.trim());
+  };
 
   function append(s: string) {
     setText((prev) => (prev ? `${prev}, ${s}` : s));
@@ -83,10 +109,7 @@ export default function AddActivityPage() {
           )}
 
           <Button
-            onClick={() => {
-              setError(null);
-              mutation.mutate(text.trim());
-            }}
+            onClick={submit}
             disabled={!text.trim() || mutation.isPending}
             className="w-full"
             size="lg"
@@ -101,6 +124,15 @@ export default function AddActivityPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <CoinInsufficientModal
+        open={showInsufficient}
+        onClose={() => setShowInsufficient(false)}
+        onAdRewardSuccess={() => {
+          setShowInsufficient(false);
+          if (text.trim()) mutation.mutate(text.trim());
+        }}
+      />
     </main>
   );
 }

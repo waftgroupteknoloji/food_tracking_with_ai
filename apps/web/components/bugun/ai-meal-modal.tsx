@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { uploadImage } from '@/lib/upload-web';
 import { ApiError } from '@yemek-takip/api-client';
+import type { CoinBalance } from '@yemek-takip/validators';
 import { Icon } from './icon';
+import { CoinInsufficientModal } from '@/components/coin-insufficient-modal';
+import { COIN_BALANCE_QUERY_KEY } from '@/components/coin-badge';
 
 type Step = 1 | 2 | 3;
 type Source = 'photo' | 'manual' | 'voice' | 'fav';
@@ -18,9 +21,12 @@ interface Props {
 
 export function AIMealModal({ open, onClose }: Props) {
   const router = useRouter();
+  const qc = useQueryClient();
   const [step, setStep] = useState<Step>(1);
   const [source, setSource] = useState<Source>('photo');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showInsufficient, setShowInsufficient] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -58,6 +64,11 @@ export function AIMealModal({ open, onClose }: Props) {
       }, 600);
     },
     onError: (err) => {
+      if (err instanceof ApiError && err.code === 'INSUFFICIENT_COINS') {
+        setShowInsufficient(true);
+        setStep(1);
+        return;
+      }
       setErrorMsg(
         err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Hata',
       );
@@ -67,8 +78,41 @@ export function AIMealModal({ open, onClose }: Props) {
 
   if (!open) return null;
 
+  if (showInsufficient) {
+    return (
+      <CoinInsufficientModal
+        open={showInsufficient}
+        onClose={() => {
+          setShowInsufficient(false);
+          setPendingFile(null);
+        }}
+        onAdRewardSuccess={() => {
+          setShowInsufficient(false);
+          // Reklam izlendi, +1 coin geldi — dosya bekliyorsa otomatik tekrar dene.
+          if (pendingFile) {
+            const f = pendingFile;
+            setPendingFile(null);
+            setStep(2);
+            upload.mutate(f);
+          }
+        }}
+      />
+    );
+  }
+
+  const hasCoinForAnalysis = () => {
+    const data = qc.getQueryData<CoinBalance>(COIN_BALANCE_QUERY_KEY);
+    if (!data) return true; // henüz veri yok — sunucuya gitsin
+    return data.hasActiveSubscription || data.coins >= 1;
+  };
+
   const handleFile = (file: File) => {
     setErrorMsg(null);
+    if (!hasCoinForAnalysis()) {
+      setPendingFile(file);
+      setShowInsufficient(true);
+      return;
+    }
     setStep(2);
     upload.mutate(file);
   };

@@ -9,6 +9,15 @@ const StreakSubSchema = new Schema(
   { _id: false },
 );
 
+const SubscriptionSubSchema = new Schema(
+  {
+    plan: { type: String, enum: ['monthly', 'yearly'], default: null },
+    startedAt: { type: Date, default: null },
+    expiresAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
+
 const UserProfileSubSchema = new Schema(
   {
     heightCm: { type: Number, min: 80, max: 250 },
@@ -42,6 +51,8 @@ const UserSchema = new Schema(
     avatarKey: { type: String, default: null },
     profile: { type: UserProfileSubSchema, default: () => ({}) },
     streak: { type: StreakSubSchema, default: () => ({}) },
+    coins: { type: Number, default: 0, min: 0 },
+    subscription: { type: SubscriptionSubSchema, default: () => ({}) },
   },
   { timestamps: true },
 );
@@ -77,6 +88,24 @@ export function toPublicUser(doc: UserDoc) {
       longest: doc.streak?.longest ?? 0,
       lastLogDate: doc.streak?.lastLogDate ?? null,
     },
+    coins: doc.coins ?? 0,
+    subscription: serializeSubscription(doc.subscription),
+    hasActiveSubscription: hasActiveSubscription(doc.subscription),
     createdAt: doc.createdAt.toISOString(),
   };
+}
+
+function serializeSubscription(sub: UserDoc['subscription']) {
+  if (!sub || !sub.plan || !sub.expiresAt || !sub.startedAt) return null;
+  return {
+    plan: sub.plan,
+    startedAt: sub.startedAt instanceof Date ? sub.startedAt.toISOString() : sub.startedAt,
+    expiresAt: sub.expiresAt instanceof Date ? sub.expiresAt.toISOString() : sub.expiresAt,
+  };
+}
+
+export function hasActiveSubscription(sub: UserDoc['subscription'] | null | undefined): boolean {
+  if (!sub || !sub.expiresAt) return false;
+  const expiresAt = sub.expiresAt instanceof Date ? sub.expiresAt : new Date(sub.expiresAt);
+  return expiresAt.getTime() > Date.now();
 }

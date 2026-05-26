@@ -34,6 +34,7 @@ import { C, onPrimary } from '@/lib/theme';
 import { todayLocalDate } from '@yemek-takip/utils';
 import { ApiError } from '@yemek-takip/api-client';
 import type { WeightEntry, WeightPeriod } from '@yemek-takip/validators';
+import { CoinBadge } from '@/components/coin-badge';
 
 const RANGES: { value: WeightPeriod; label: string }[] = [
   { value: 'week', label: '7 gün' },
@@ -150,6 +151,9 @@ export default function WeightScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
+      <View style={{ position: 'absolute', top: 12, right: 16, zIndex: 10 }}>
+        <CoinBadge />
+      </View>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 110 }}

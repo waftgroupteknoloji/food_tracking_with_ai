@@ -6,4 +6,5 @@ export * from './weight';
 export * from './water';
 export * from './stats';
 export * from './uploads';
+export * from './coin';
 export * from './common';

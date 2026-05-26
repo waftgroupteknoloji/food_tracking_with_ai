@@ -15,10 +15,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@yemek-takip/api-client';
+import type { CoinBalance } from '@yemek-takip/validators';
 import { api } from '@/lib/api';
 import { C } from '@/lib/theme';
+import { CoinInsufficientSheet } from '@/components/coin-insufficient-sheet';
+import { COIN_BALANCE_QUERY_KEY } from '@/components/coin-badge';
 
 const SUGGESTIONS: { emoji: string; text: string }[] = [
   { emoji: '🚶', text: '1 saat yürüyüş' },
@@ -31,8 +34,16 @@ const SUGGESTIONS: { emoji: string; text: string }[] = [
 
 export default function AddActivityScreen() {
   const router = useRouter();
+  const qc = useQueryClient();
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
+  const [showInsufficient, setShowInsufficient] = useState(false);
+
+  const hasCoinForAnalysis = () => {
+    const data = qc.getQueryData<CoinBalance>(COIN_BALANCE_QUERY_KEY);
+    if (!data) return true;
+    return data.hasActiveSubscription || data.coins >= 1;
+  };
 
   const mutation = useMutation({
     mutationFn: (inputText: string) =>
@@ -41,9 +52,24 @@ export default function AddActivityScreen() {
         performedAt: new Date().toISOString(),
       }),
     onSuccess: (a) => router.replace(`/activity/${a._id}`),
-    onError: (err) =>
-      Alert.alert('Hata', err instanceof ApiError ? err.message : 'Bilinmeyen hata'),
+    onError: (err) => {
+      if (err instanceof ApiError && err.code === 'INSUFFICIENT_COINS') {
+        setShowInsufficient(true);
+        return;
+      }
+      Alert.alert('Hata', err instanceof ApiError ? err.message : 'Bilinmeyen hata');
+    },
   });
+
+  const submit = () => {
+    const value = text.trim();
+    if (!value) return;
+    if (!hasCoinForAnalysis()) {
+      setShowInsufficient(true);
+      return;
+    }
+    mutation.mutate(value);
+  };
 
   const canSubmit = text.trim().length > 0 && !mutation.isPending;
 
@@ -149,7 +175,7 @@ export default function AddActivityScreen() {
             </View>
 
             <Pressable
-              onPress={() => canSubmit && mutation.mutate(text.trim())}
+              onPress={() => canSubmit && submit()}
               disabled={!canSubmit}
               style={[s.primaryBtn, !canSubmit && { opacity: 0.5 }]}
             >
@@ -176,6 +202,15 @@ export default function AddActivityScreen() {
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
+        <CoinInsufficientSheet
+          visible={showInsufficient}
+          onClose={() => setShowInsufficient(false)}
+          onAdRewardSuccess={() => {
+            setShowInsufficient(false);
+            const value = text.trim();
+            if (value) mutation.mutate(value);
+          }}
+        />
       </SafeAreaView>
     </>
   );

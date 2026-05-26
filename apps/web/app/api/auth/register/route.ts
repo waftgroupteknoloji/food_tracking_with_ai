@@ -1,12 +1,13 @@
 import { type NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { RegisterInputSchema } from '@yemek-takip/validators';
+import { RegisterInputSchema, SIGNUP_BONUS } from '@yemek-takip/validators';
 import { connectMongo } from '@/lib/mongoose';
 import { User, toPublicUser } from '@/models/User';
 import { RefreshToken } from '@/models/RefreshToken';
 import { generateRefreshToken, signAccessToken } from '@/lib/auth';
 import { setAuthCookies } from '@/lib/cookies';
 import { ok, fail, failFromError } from '@/lib/api-response';
+import { grantCoins } from '@/lib/coin-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,11 @@ export async function POST(req: NextRequest) {
       passwordHash,
     });
 
+    // Hoş geldin bonusu: ledger'a iz kalsın diye grantCoins kullan (schema default 0).
+    await grantCoins(user._id, SIGNUP_BONUS, 'signup_bonus');
+    // Güncel coin değerini almak için reload:
+    const userWithCoins = await User.findById(user._id);
+
     const accessToken = await signAccessToken({
       userId: String(user._id),
       email: user.email,
@@ -44,7 +50,7 @@ export async function POST(req: NextRequest) {
     });
 
     const res = ok({
-      user: toPublicUser(user),
+      user: toPublicUser(userWithCoins ?? user),
       accessToken,
       refreshToken: refresh.raw,
     });

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Icon, type IconName } from '@/components/bugun/icon';
+import { CoinBadge } from '@/components/coin-badge';
 import '@/components/bugun/bugun-tokens.css';
 
 const items: { id: string; label: string; href: string; icon: IconName }[] = [
@@ -107,6 +108,7 @@ export function AppNav({ email }: { email: string }) {
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <CoinBadge />
         <Link href="/add/meal" className="b-btn b-btn-primary" style={{ height: 36 }}>
           <Icon name="camera" size={16} /> Yemek ekle
         </Link>

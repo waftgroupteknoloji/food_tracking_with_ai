@@ -15,9 +15,13 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { ApiError } from '@yemek-takip/api-client';
+import type { CoinBalance } from '@yemek-takip/validators';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { pickFromLibrary, takePhoto, uploadImageFromUri } from '@/lib/upload';
 import { C, onPrimary } from '@/lib/theme';
+import { CoinInsufficientSheet } from '@/components/coin-insufficient-sheet';
+import { COIN_BALANCE_QUERY_KEY } from '@/components/coin-badge';
 
 type Stage = 'idle' | 'uploading' | 'analyzing';
 
@@ -30,12 +34,24 @@ const STAGES = [
 
 export default function AddScreen() {
   const router = useRouter();
+  const qc = useQueryClient();
   const [stage, setStage] = useState<Stage>('idle');
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showInsufficient, setShowInsufficient] = useState(false);
+
+  const hasCoinForAnalysis = () => {
+    const data = qc.getQueryData<CoinBalance>(COIN_BALANCE_QUERY_KEY);
+    if (!data) return true;
+    return data.hasActiveSubscription || data.coins >= 1;
+  };
 
   async function startMealUpload(source: 'camera' | 'library') {
     setError(null);
+    if (!hasCoinForAnalysis()) {
+      setShowInsufficient(true);
+      return;
+    }
     try {
       const uri = source === 'camera' ? await takePhoto() : await pickFromLibrary();
       if (!uri) return;
@@ -55,6 +71,11 @@ export default function AddScreen() {
       router.push(`/meal/${meal._id}?fresh=1`);
     } catch (err) {
       setStage('idle');
+      setPreview(null);
+      if (err instanceof ApiError && err.code === 'INSUFFICIENT_COINS') {
+        setShowInsufficient(true);
+        return;
+      }
       setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Hata');
       Alert.alert('Hata', err instanceof Error ? err.message : 'Bilinmeyen hata');
     }
@@ -101,6 +122,10 @@ export default function AddScreen() {
           </View>
         )}
       </ScrollView>
+      <CoinInsufficientSheet
+        visible={showInsufficient}
+        onClose={() => setShowInsufficient(false)}
+      />
     </SafeAreaView>
   );
 }

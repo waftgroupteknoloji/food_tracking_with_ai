@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ObjectIdSchema, LocalDateSchema } from './common';
+import { SubscriptionStateSchema } from './coin';
 
 export const SexSchema = z.enum(['male', 'female', 'other']);
 export type Sex = z.infer<typeof SexSchema>;
@@ -38,6 +39,9 @@ export const PublicUserSchema = z.object({
   avatarUrl: z.string().url().nullable().optional(),
   profile: UserProfileSchema,
   streak: StreakSchema,
+  coins: z.number().int().min(0).default(0),
+  subscription: SubscriptionStateSchema.nullable().default(null),
+  hasActiveSubscription: z.boolean().default(false),
   createdAt: z.string().datetime().or(z.date()),
 });
 export type PublicUser = z.infer<typeof PublicUserSchema>;

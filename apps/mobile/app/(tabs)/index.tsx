@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { CalorieRing } from '@/components/calorie-ring';
 import { MealPhoto } from '@/components/meal-photo';
+import { CoinBadge } from '@/components/coin-badge';
 import { todayLocalDate } from '@yemek-takip/utils';
 
 export default function DashboardScreen() {
@@ -48,11 +49,14 @@ export default function DashboardScreen() {
           />
         }
       >
-        <View>
-          <Text className="text-sm text-neutral-500">{today}</Text>
-          <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-            Merhaba {user?.displayName} 👋
-          </Text>
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1">
+            <Text className="text-sm text-neutral-500">{today}</Text>
+            <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+              Merhaba {user?.displayName} 👋
+            </Text>
+          </View>
+          <CoinBadge />
         </View>
 
         <View className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 items-center">

@@ -9,6 +9,7 @@ import { todayLocalDate, addDaysToLocal } from '@yemek-takip/utils';
 import type { Activity, DailyStats, Meal } from '@yemek-takip/validators';
 import { Icon, type IconName } from '@/components/bugun/icon';
 import { AIMealModal } from '@/components/bugun/ai-meal-modal';
+import { CoinBadge } from '@/components/coin-badge';
 import '@/components/bugun/bugun-tokens.css';
 
 const TR_DAYS_LONG = [
@@ -460,6 +461,7 @@ function GunlukNav({
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <CoinBadge />
         <button type="button" className="b-btn b-btn-primary" style={{ height: 36 }} onClick={onOpenAdd}>
           <Icon name="camera" size={16} /> Yemek ekle
         </button>

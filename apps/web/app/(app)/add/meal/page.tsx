@@ -2,12 +2,16 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@yemek-takip/api-client';
+import type { CoinBalance } from '@yemek-takip/validators';
 import { uploadImage } from '@/lib/upload-web';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Camera, Upload, Loader2, X, Type, Image as ImageIcon } from 'lucide-react';
+import { CoinInsufficientModal } from '@/components/coin-insufficient-modal';
+import { COIN_BALANCE_QUERY_KEY } from '@/components/coin-badge';
 
 type Stage = 'idle' | 'uploading' | 'analyzing' | 'error';
 type Mode = 'photo' | 'text';
@@ -22,15 +26,31 @@ const TEXT_SUGGESTIONS = [
 
 export default function AddMealPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<Mode>('photo');
   const [preview, setPreview] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [stage, setStage] = useState<Stage>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [showInsufficient, setShowInsufficient] = useState(false);
+  const [pending, setPending] = useState<{ kind: 'file'; file: File } | { kind: 'text' } | null>(
+    null,
+  );
+
+  const hasCoinForAnalysis = () => {
+    const data = qc.getQueryData<CoinBalance>(COIN_BALANCE_QUERY_KEY);
+    if (!data) return true; // henüz yüklenmedi — sunucuya gitsin
+    return data.hasActiveSubscription || data.coins >= 1;
+  };
 
   async function handleFile(file: File) {
     setError(null);
+    if (!hasCoinForAnalysis()) {
+      setPending({ kind: 'file', file });
+      setShowInsufficient(true);
+      return;
+    }
     setPreview(URL.createObjectURL(file));
     try {
       setStage('uploading');
@@ -45,6 +65,11 @@ export default function AddMealPage() {
       router.replace(`/meal/${meal._id}?fresh=1`);
     } catch (err) {
       setStage('error');
+      if (err instanceof ApiError && err.code === 'INSUFFICIENT_COINS') {
+        setPending({ kind: 'file', file });
+        setShowInsufficient(true);
+        return;
+      }
       setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Hata');
     }
   }
@@ -53,6 +78,11 @@ export default function AddMealPage() {
     const value = text.trim();
     if (!value) return;
     setError(null);
+    if (!hasCoinForAnalysis()) {
+      setPending({ kind: 'text' });
+      setShowInsufficient(true);
+      return;
+    }
     try {
       setStage('analyzing');
       const meal = await api.meals.create({
@@ -62,6 +92,11 @@ export default function AddMealPage() {
       router.replace(`/meal/${meal._id}?fresh=1`);
     } catch (err) {
       setStage('error');
+      if (err instanceof ApiError && err.code === 'INSUFFICIENT_COINS') {
+        setPending({ kind: 'text' });
+        setShowInsufficient(true);
+        return;
+      }
       setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Hata');
     }
   }
@@ -248,6 +283,26 @@ export default function AddMealPage() {
       <div className="text-center text-xs text-muted-foreground">
         AI analizi 3-10 saniye sürebilir. Tahmin yanlışsa sonraki ekranda her item&apos;ı düzenleyebilirsin.
       </div>
+
+      <CoinInsufficientModal
+        open={showInsufficient}
+        onClose={() => {
+          setShowInsufficient(false);
+          setPending(null);
+          setStage('idle');
+        }}
+        onAdRewardSuccess={() => {
+          setShowInsufficient(false);
+          // Reklam izlendi, +1 coin geldi — bekleyen analizi otomatik tekrar dene.
+          const p = pending;
+          setPending(null);
+          if (p?.kind === 'file') {
+            void handleFile(p.file);
+          } else if (p?.kind === 'text') {
+            void handleText();
+          }
+        }}
+      />
     </main>
   );
 }

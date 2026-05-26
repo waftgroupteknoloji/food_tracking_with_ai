@@ -19,6 +19,7 @@ import { addDaysToLocal, todayLocalDate } from '@yemek-takip/utils';
 import type { DailyStats, Meal } from '@yemek-takip/validators';
 import { C } from '@/lib/theme';
 import { MealPhoto } from '@/components/meal-photo';
+import { CoinBadge } from '@/components/coin-badge';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -274,12 +275,15 @@ export default function GunlukScreen() {
           />
         }
       >
-        <View style={{ paddingHorizontal: 18, paddingTop: 6, paddingBottom: 4 }}>
-          <Text style={s.labelXs}>Günlük · akış</Text>
-          <Text style={s.h1}>Ne yedin, ne yaktın?</Text>
-          <Text style={{ color: C.text3, fontSize: 12.5, marginTop: 4 }}>
-            Son {count} günün tam dökümü, saat saat.
-          </Text>
+        <View style={{ paddingHorizontal: 18, paddingTop: 6, paddingBottom: 4, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.labelXs}>Günlük · akış</Text>
+            <Text style={s.h1}>Ne yedin, ne yaktın?</Text>
+            <Text style={{ color: C.text3, fontSize: 12.5, marginTop: 4 }}>
+              Son {count} günün tam dökümü, saat saat.
+            </Text>
+          </View>
+          <CoinBadge />
         </View>
 
         <View style={{ paddingHorizontal: 18, paddingTop: 12 }}>

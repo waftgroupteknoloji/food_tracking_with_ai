@@ -10,6 +10,7 @@ import type { Activity, DailyStats, Meal, StreakStats } from '@yemek-takip/valid
 import { Icon, type IconName } from './icon';
 import { CalorieRing, MacroLine } from './calorie-ring';
 import { AIMealModal } from './ai-meal-modal';
+import { CoinBadge } from '@/components/coin-badge';
 import './bugun-tokens.css';
 
 const TR_DAYS = ['Pazar', 'Pzt', 'Salı', 'Çar', 'Per', 'Cum', 'Cmt'];
@@ -342,6 +343,7 @@ function DesktopNav({
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <CoinBadge />
         <button
           type="button"
           className="b-btn b-btn-primary"

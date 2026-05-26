@@ -4,6 +4,8 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { getAi, isAiConfigured } from '@/lib/ai';
 import { rateLimit } from '@/lib/rate-limit';
 import { ok, fail, failFromError } from '@/lib/api-response';
+import { spendForAnalysis, refundAnalysis } from '@/lib/coin-service';
+import { randomUUID } from 'node:crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,10 +33,31 @@ export async function POST(req: NextRequest) {
       return fail('VALIDATION', 'Geçersiz giriş', 400, parsed.error.flatten());
     }
 
-    const result = await getAi().analyzeActivity({
-      text: parsed.data.inputText,
-      weightKg: parsed.data.weightKg,
-    });
+    const coinRefId = randomUUID();
+    const spend = await spendForAnalysis(user.userId, coinRefId, {});
+    if (!spend.ok) {
+      return fail(
+        'INSUFFICIENT_COINS',
+        'Coin yetersiz. Reklam izleyerek veya paket alarak coin kazanabilirsin.',
+        402,
+      );
+    }
+
+    let result;
+    try {
+      result = await getAi().analyzeActivity({
+        text: parsed.data.inputText,
+        weightKg: parsed.data.weightKg,
+      });
+    } catch (aiErr) {
+      await refundAnalysis(user.userId, coinRefId, 'ai_exception');
+      throw aiErr;
+    }
+
+    if (result.error || result.analysis.items.length === 0) {
+      await refundAnalysis(user.userId, coinRefId, result.error ? 'ai_error' : 'no_items');
+    }
+
     return ok({
       items: result.analysis.items,
       promptVersion: result.promptVersion,

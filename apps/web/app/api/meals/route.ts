@@ -10,6 +10,8 @@ import { bumpStreak } from '@/lib/streak';
 import { ok, fail, failFromError } from '@/lib/api-response';
 import { toLocalDate, DEFAULT_TIMEZONE } from '@yemek-takip/utils';
 import { MEAL_PROMPT_VERSION, MEAL_TEXT_PROMPT_VERSION, MODEL_VERSION } from '@yemek-takip/ai';
+import { spendForAnalysis, refundAnalysis } from '@/lib/coin-service';
+import { randomUUID } from 'node:crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,16 +48,41 @@ export async function POST(req: NextRequest) {
     const isTextInput = !parsed.data.photoUrl && !!parsed.data.inputText;
     const fallbackPromptVersion = isTextInput ? MEAL_TEXT_PROMPT_VERSION : MEAL_PROMPT_VERSION;
 
-    const aiResult = isAiConfigured()
-      ? isTextInput
-        ? await getAi().analyzeMealText({ text: parsed.data.inputText! })
-        : await getAi().analyzeMeal({ imageUrl: parsed.data.photoUrl! })
-      : {
-          analysis: { items: [] },
-          rawJson: null,
-          promptVersion: fallbackPromptVersion,
-          error: 'AI configured edilmedi — manuel item ekle',
-        };
+    const willCallAi = isAiConfigured() && (!!parsed.data.photoUrl || !!parsed.data.inputText);
+    const coinRefId = willCallAi ? randomUUID() : null;
+
+    if (willCallAi && coinRefId) {
+      const spend = await spendForAnalysis(auth.userId, coinRefId, {});
+      if (!spend.ok) {
+        return fail(
+          'INSUFFICIENT_COINS',
+          'Coin yetersiz. Reklam izleyerek veya paket alarak coin kazanabilirsin.',
+          402,
+        );
+      }
+    }
+
+    let aiResult;
+    try {
+      aiResult = willCallAi
+        ? isTextInput
+          ? await getAi().analyzeMealText({ text: parsed.data.inputText! })
+          : await getAi().analyzeMeal({ imageUrl: parsed.data.photoUrl! })
+        : {
+            analysis: { items: [] },
+            rawJson: null,
+            promptVersion: fallbackPromptVersion,
+            error: 'AI configured edilmedi — manuel item ekle',
+          };
+    } catch (aiErr) {
+      if (coinRefId) await refundAnalysis(auth.userId, coinRefId, 'ai_exception');
+      throw aiErr;
+    }
+
+    // Gemini hata raporladıysa veya hiç item dönmediyse coin iade et.
+    if (coinRefId && (aiResult.error || aiResult.analysis.items.length === 0)) {
+      await refundAnalysis(auth.userId, coinRefId, aiResult.error ? 'ai_error' : 'no_items');
+    }
 
     // Items'ı normalize et + sanity cap
     const items = aiResult.analysis.items

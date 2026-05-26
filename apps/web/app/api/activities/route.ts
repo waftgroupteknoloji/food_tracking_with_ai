@@ -11,6 +11,8 @@ import { bumpStreak } from '@/lib/streak';
 import { ok, fail, failFromError } from '@/lib/api-response';
 import { toLocalDate, DEFAULT_TIMEZONE, calculateKcalBurned } from '@yemek-takip/utils';
 import { ACTIVITY_PROMPT_VERSION, MODEL_VERSION } from '@yemek-takip/ai';
+import { spendForAnalysis, refundAnalysis } from '@/lib/coin-service';
+import { randomUUID } from 'node:crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,14 +52,38 @@ export async function POST(req: NextRequest) {
       : new Date();
     const localDate = toLocalDate(performedAt, timezone);
 
-    const aiResult = isAiConfigured()
-      ? await getAi().analyzeActivity({ text: parsed.data.inputText, weightKg })
-      : {
-          analysis: { items: [] },
-          rawJson: null,
-          promptVersion: ACTIVITY_PROMPT_VERSION,
-          error: 'AI configured edilmedi — manuel item ekle',
-        };
+    const willCallAi = isAiConfigured() && !!parsed.data.inputText;
+    const coinRefId = willCallAi ? randomUUID() : null;
+
+    if (willCallAi && coinRefId) {
+      const spend = await spendForAnalysis(auth.userId, coinRefId, {});
+      if (!spend.ok) {
+        return fail(
+          'INSUFFICIENT_COINS',
+          'Coin yetersiz. Reklam izleyerek veya paket alarak coin kazanabilirsin.',
+          402,
+        );
+      }
+    }
+
+    let aiResult;
+    try {
+      aiResult = willCallAi
+        ? await getAi().analyzeActivity({ text: parsed.data.inputText, weightKg })
+        : {
+            analysis: { items: [] },
+            rawJson: null,
+            promptVersion: ACTIVITY_PROMPT_VERSION,
+            error: 'AI configured edilmedi — manuel item ekle',
+          };
+    } catch (aiErr) {
+      if (coinRefId) await refundAnalysis(auth.userId, coinRefId, 'ai_exception');
+      throw aiErr;
+    }
+
+    if (coinRefId && (aiResult.error || aiResult.analysis.items.length === 0)) {
+      await refundAnalysis(auth.userId, coinRefId, aiResult.error ? 'ai_error' : 'no_items');
+    }
 
     // Items + sanity check (formül ile karşılaştır)
     const items = aiResult.analysis.items.map((it) => {

@@ -20,6 +20,12 @@ import type {
   Activity,
   WeightEntry,
   WaterEntry,
+  CoinBalance,
+  CoinCatalog,
+  CoinTransactionsResponse,
+  CoinPackageId,
+  SubscriptionPlanId,
+  AdPlatform,
 } from '@yemek-takip/validators';
 
 export interface AuthSuccess {
@@ -129,6 +135,42 @@ export function endpoints(client: ApiClient) {
           method: 'GET',
         }),
       streak: () => client.request<StreakStats>('/api/stats/streak', { method: 'GET' }),
+    },
+    coins: {
+      balance: () =>
+        client.request<CoinBalance>('/api/coins/balance', { method: 'GET' }),
+      transactions: (limit = 50, before?: string) => {
+        const params = new URLSearchParams({ limit: String(limit) });
+        if (before) params.set('before', before);
+        return client.request<CoinTransactionsResponse>(
+          `/api/coins/transactions?${params.toString()}`,
+          { method: 'GET' },
+        );
+      },
+      catalog: () =>
+        client.request<CoinCatalog>('/api/coins/catalog', { method: 'GET', auth: false }),
+      purchase: (packageId: CoinPackageId) =>
+        client.request<{
+          orderId: string;
+          coins: number;
+          subscription: CoinBalance['subscription'];
+          hasActiveSubscription: boolean;
+        }>('/api/coins/purchase', { method: 'POST', json: { packageId } }),
+      subscribe: (planId: SubscriptionPlanId) =>
+        client.request<{
+          orderId: string;
+          coins: number;
+          expiresAt: string;
+          subscription: CoinBalance['subscription'];
+          hasActiveSubscription: boolean;
+        }>('/api/coins/subscribe', { method: 'POST', json: { planId } }),
+      adReward: (adNonce: string, platform: AdPlatform) =>
+        client.request<{
+          awarded: number;
+          coins: number;
+          subscription: CoinBalance['subscription'];
+          hasActiveSubscription: boolean;
+        }>('/api/coins/ad-reward', { method: 'POST', json: { adNonce, platform } }),
     },
   };
 }
