@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { OdematikButton } from '@odematik/billing';
 import { api } from '@/lib/api';
 import { COIN_BALANCE_QUERY_KEY } from '@/components/coin-badge';
-import type { CoinPackageId, SubscriptionPlanId } from '@yemek-takip/validators';
 import '@/components/bugun/bugun-tokens.css';
 
 const COINS_HISTORY_KEY = ['coins', 'transactions'] as const;
@@ -21,6 +21,11 @@ export default function CoinsPage() {
   const balance = useQuery({
     queryKey: COIN_BALANCE_QUERY_KEY,
     queryFn: () => api.coins.balance(),
+  });
+  const me = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.auth.me(),
+    staleTime: 5 * 60_000,
   });
   const catalog = useQuery({
     queryKey: ['coins', 'catalog'],
@@ -42,15 +47,13 @@ export default function CoinsPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // NOT: ödeme entegrasyonu (Iyzico) henüz bağlı değil. Şu an satın al/üye ol
-  // butonları kullanıcıya "yakında" mesajı gösteriyor. Gerçek ödeme akışı
-  // bağlandığında `api.coins.purchase(id)` / `api.coins.subscribe(id)` çağrılarını
-  // ödeme provider'ı callback'inden tetikle.
-  const handlePurchase = (_id: CoinPackageId) => {
-    showToast('💳 Ödeme sistemi yakında — şu an aktif değil');
-  };
-  const handleSubscribe = (_id: SubscriptionPlanId) => {
-    showToast('💳 Ödeme sistemi yakında — şu an aktif değil');
+  // Ödeme akışı: <OdematikButton> productId ile mount edilir, klik açılır
+  // modal'da PSP iframe'i gösterir, başarılı ödeme server-side doğrulanır,
+  // /api/odematik handler'ı coin/subscription kreditlemesini yapar. Burada
+  // sadece success callback'inde bakiyeyi invalidate ediyoruz.
+  const handlePaid = (msg: string) => () => {
+    invalidate();
+    showToast(msg);
   };
 
   const adReward = useMutation({
@@ -139,14 +142,26 @@ export default function CoinsPage() {
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
           {catalog.data?.plans.map((plan) => (
-            <PlanCard
+            <OdematikButton
               key={plan.id}
-              label={plan.label}
-              priceTRY={plan.priceTRY}
-              note={plan.id === 'yearly' ? 'Yıl boyunca sınırsız' : 'Ay boyunca sınırsız'}
-              onClick={() => handleSubscribe(plan.id)}
-              highlight={plan.id === 'yearly'}
-            />
+              productId={`plan_${plan.id}`}
+              customer={me.data ? { id: me.data._id, email: me.data.email } : { id: '', email: '' }}
+              disabled={!me.data}
+              brand={{
+                name: 'Yemek Takip',
+                summary: `${plan.label} · ${plan.priceTRY} ₺`,
+                accent: plan.id === 'yearly' ? '#d4a949' : '#6366F1',
+              }}
+              onPaid={handlePaid('✓ Üyeliğin aktifleştirildi')}
+              onError={(e: Error) => showToast(e.message)}
+              style={planCardStyle(plan.id === 'yearly')}
+            >
+              <PlanCardContent
+                label={plan.label}
+                priceTRY={plan.priceTRY}
+                note={plan.id === 'yearly' ? 'Yıl boyunca sınırsız' : 'Ay boyunca sınırsız'}
+              />
+            </OdematikButton>
           ))}
         </div>
       </section>
@@ -156,13 +171,22 @@ export default function CoinsPage() {
         <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 12px' }}>Coin paketleri</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
           {catalog.data?.packages.map((pkg) => (
-            <PackageCard
+            <OdematikButton
               key={pkg.id}
-              label={pkg.label}
-              coins={pkg.coins}
-              priceTRY={pkg.priceTRY}
-              onClick={() => handlePurchase(pkg.id)}
-            />
+              productId={pkg.id}
+              customer={me.data ? { id: me.data._id, email: me.data.email } : { id: '', email: '' }}
+              disabled={!me.data}
+              brand={{
+                name: 'Yemek Takip',
+                summary: `${pkg.coins} Coin · ${pkg.priceTRY} ₺`,
+                accent: '#6366F1',
+              }}
+              onPaid={handlePaid('✓ Coin paketin hesabına eklendi')}
+              onError={(e: Error) => showToast(e.message)}
+              style={packageCardStyle}
+            >
+              <PackageCardContent label={pkg.label} coins={pkg.coins} priceTRY={pkg.priceTRY} />
+            </OdematikButton>
           ))}
         </div>
       </section>
@@ -244,91 +268,55 @@ export default function CoinsPage() {
   );
 }
 
-function PackageCard({
-  label,
-  coins,
-  priceTRY,
-  onClick,
-  disabled,
-}: {
-  label: string;
-  coins: number;
-  priceTRY: number;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
+// Visual styling for the buy buttons. OdematikButton takes a `style` prop that
+// is applied to the underlying <button>, so we pass these to make the buttons
+// look like cards.
+
+const packageCardStyle: CSSProperties = {
+  textAlign: 'left',
+  padding: 18,
+  borderRadius: 12,
+  background: 'oklch(0.17 0.018 250)',
+  border: '1px solid var(--border-2, oklch(1 0 0 / 0.08))',
+  color: 'var(--text)',
+  fontFamily: 'inherit',
+  width: '100%',
+};
+
+const planCardStyle = (highlight: boolean): CSSProperties => ({
+  textAlign: 'left',
+  padding: 18,
+  borderRadius: 12,
+  background: highlight
+    ? 'linear-gradient(135deg, oklch(0.78 0.16 75 / 0.2), oklch(0.2 0.02 250))'
+    : 'oklch(0.17 0.018 250)',
+  border: `1px solid ${highlight ? 'oklch(0.78 0.16 75 / 0.5)' : 'var(--border-2, oklch(1 0 0 / 0.08))'}`,
+  color: 'var(--text)',
+  fontFamily: 'inherit',
+  width: '100%',
+});
+
+function PackageCardContent({ label, coins, priceTRY }: { label: string; coins: number; priceTRY: number }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        textAlign: 'left',
-        padding: 18,
-        borderRadius: 12,
-        background: 'oklch(0.17 0.018 250)',
-        border: '1px solid var(--border-2, oklch(1 0 0 / 0.08))',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        color: 'var(--text)',
-        fontFamily: 'inherit',
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
+    <>
       <div style={{ fontSize: 13, color: 'var(--text-3, oklch(0.6 0.01 250))' }}>{label}</div>
       <div style={{ fontSize: 26, fontWeight: 700, margin: '6px 0', display: 'flex', alignItems: 'baseline', gap: 6 }}>
         🪙 <span>{coins}</span>
       </div>
-      <div
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: 'var(--primary, oklch(0.75 0.18 200))',
-        }}
-      >
+      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--primary, oklch(0.75 0.18 200))' }}>
         {priceTRY} ₺
       </div>
-    </button>
+    </>
   );
 }
 
-function PlanCard({
-  label,
-  priceTRY,
-  note,
-  onClick,
-  disabled,
-  highlight,
-}: {
-  label: string;
-  priceTRY: number;
-  note: string;
-  onClick: () => void;
-  disabled?: boolean;
-  highlight?: boolean;
-}) {
+function PlanCardContent({ label, priceTRY, note }: { label: string; priceTRY: number; note: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        textAlign: 'left',
-        padding: 18,
-        borderRadius: 12,
-        background: highlight
-          ? 'linear-gradient(135deg, oklch(0.78 0.16 75 / 0.2), oklch(0.2 0.02 250))'
-          : 'oklch(0.17 0.018 250)',
-        border: `1px solid ${highlight ? 'oklch(0.78 0.16 75 / 0.5)' : 'var(--border-2, oklch(1 0 0 / 0.08))'}`,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        color: 'var(--text)',
-        fontFamily: 'inherit',
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
+    <>
       <div style={{ fontSize: 13, color: 'var(--text-3, oklch(0.6 0.01 250))' }}>{label}</div>
       <div style={{ fontSize: 26, fontWeight: 700, margin: '6px 0' }}>{priceTRY} ₺</div>
       <div style={{ fontSize: 12, color: 'var(--text-3, oklch(0.6 0.01 250))' }}>{note}</div>
-    </button>
+    </>
   );
 }
 
