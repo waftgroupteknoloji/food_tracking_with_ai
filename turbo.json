@@ -14,7 +14,10 @@
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "S3_BUCKET_NAME",
-        "S3_PUBLIC_BASE_URL"
+        "S3_PUBLIC_BASE_URL",
+        "ODEMATIK_API_KEY",
+        "ODEMATIK_API_BASE",
+        "ODEMATIK_WEBHOOK_SECRET"
       ]
     },
     "dev": {
