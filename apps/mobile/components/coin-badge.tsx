@@ -1,8 +1,9 @@
-import { Pressable, Text, View, ActivityIndicator } from 'react-native';
+import { Pressable, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
+import { C } from '@/lib/theme';
 
 export const COIN_BALANCE_QUERY_KEY = ['coins', 'balance'] as const;
 
@@ -39,16 +40,16 @@ export function CoinBadge() {
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 999,
-        backgroundColor: active ? 'rgba(251, 191, 36, 0.18)' : 'rgba(0,0,0,0.06)',
+        backgroundColor: active ? 'rgba(251, 191, 36, 0.18)' : C.whiteAlpha.a06,
         borderWidth: 1,
-        borderColor: active ? 'rgba(251, 191, 36, 0.4)' : 'rgba(0,0,0,0.08)',
+        borderColor: active ? 'rgba(251, 191, 36, 0.4)' : C.whiteAlpha.a08,
       }}
     >
       <Text style={{ fontSize: 14 }}>🪙</Text>
       {q.isLoading && coins === null ? (
-        <ActivityIndicator size="small" />
+        <ActivityIndicator size="small" color={C.text} />
       ) : (
-        <Text style={{ fontWeight: '700', fontSize: 13 }}>
+        <Text style={{ fontWeight: '700', fontSize: 13, color: active ? '#fbbf24' : C.text }}>
           {active ? '∞' : (coins ?? '—')}
         </Text>
       )}

@@ -24,6 +24,10 @@ import type {
 } from '@yemek-takip/validators';
 import { C } from '@/lib/theme';
 import { COIN_BALANCE_QUERY_KEY } from '@/components/coin-badge';
+import {
+  OdematikPaymentSheet,
+  type ProductSummary,
+} from '@/components/OdematikPaymentSheet';
 
 const COINS_HISTORY_KEY = ['coins', 'transactions'] as const;
 
@@ -31,7 +35,9 @@ export default function CoinsScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const refreshMe = useAuthStore((s) => s.refreshMe);
+  const me = useAuthStore((s) => s.user);
   const [watchingAd, setWatchingAd] = useState(false);
+  const [paymentProduct, setPaymentProduct] = useState<ProductSummary | null>(null);
 
   const balance = useQuery({
     queryKey: COIN_BALANCE_QUERY_KEY,
@@ -53,21 +59,50 @@ export default function CoinsScreen() {
     void refreshMe();
   };
 
-  // NOT: ödeme entegrasyonu (Iyzico/IAP) henüz bağlı değil. Şu an satın al/üye ol
-  // butonları kullanıcıya "yakında" uyarısı gösteriyor. Gerçek ödeme akışı
-  // bağlandığında `api.coins.purchase(id)` / `api.coins.subscribe(id)` çağrılarını
-  // ödeme provider'ı callback'inden tetikle.
-  const handlePurchase = (_id: CoinPackageId) => {
-    Alert.alert(
-      'Ödeme sistemi yakında 💳',
-      'Coin paketleri için ödeme altyapısı henüz aktif değil. Çok yakında!',
-    );
+  const requireLogin = () => {
+    if (!me) {
+      Alert.alert('Giriş gerekli', 'Ödeme yapabilmek için önce giriş yap.');
+      return false;
+    }
+    return true;
   };
-  const handleSubscribe = (_id: SubscriptionPlanId) => {
+
+  const openPaymentSheet = (product: ProductSummary) => {
+    if (!requireLogin()) return;
+    setPaymentProduct(product);
+  };
+
+  const handlePurchase = (id: CoinPackageId) => {
+    const pkg = catalog.data?.packages.find((p: CoinPackage) => p.id === id);
+    if (!pkg) return;
+    openPaymentSheet({
+      productId: pkg.id,
+      label: `${pkg.coins} Coin`,
+      priceTRY: pkg.priceTRY,
+      summary: `${pkg.coins} Coin · ${pkg.priceTRY} ₺`,
+    });
+  };
+
+  const handleSubscribe = (id: SubscriptionPlanId) => {
+    const plan = catalog.data?.plans.find((p: SubscriptionPlan) => p.id === id);
+    if (!plan) return;
+    openPaymentSheet({
+      productId: `plan_${plan.id}`,
+      label: plan.label,
+      priceTRY: plan.priceTRY,
+      summary: `${plan.label} · ${plan.priceTRY} ₺`,
+      accent: plan.id === 'yearly' ? '#d4a949' : '#6366F1',
+    });
+  };
+
+  const handlePaid = () => {
     Alert.alert(
-      'Ödeme sistemi yakında 💳',
-      'Aboneliklerin ödeme altyapısı henüz aktif değil. Çok yakında!',
+      '✓ Ödeme başarılı',
+      paymentProduct?.productId.startsWith('plan_')
+        ? 'Üyeliğin aktifleştirildi.'
+        : 'Coin paketin hesabına eklendi.',
     );
+    invalidate();
   };
 
   const adReward = useMutation({
@@ -308,6 +343,17 @@ export default function CoinsScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+      <OdematikPaymentSheet
+        visible={!!paymentProduct}
+        product={paymentProduct}
+        customer={{
+          id: me?._id ?? '',
+          email: me?.email ?? '',
+        }}
+        onClose={() => setPaymentProduct(null)}
+        onPaid={handlePaid}
+        onError={(err) => Alert.alert('Ödeme hatası', err.message)}
+      />
     </>
   );
 }
