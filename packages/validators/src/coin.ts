@@ -19,11 +19,11 @@ export const SubscriptionPlanSchema = z.object({
 export type SubscriptionPlan = z.infer<typeof SubscriptionPlanSchema>;
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
-  { id: 'monthly', label: 'Aylık Üyelik', priceTRY: 129, durationDays: 30 },
-  { id: 'yearly', label: 'Yıllık Üyelik', priceTRY: 970, durationDays: 365 },
+  { id: 'monthly', label: 'Aylık Üyelik', priceTRY: 79, durationDays: 30 },
+  { id: 'yearly', label: 'Yıllık Üyelik', priceTRY: 399, durationDays: 365 },
 ];
 
-export const CoinPackageIdSchema = z.enum(['p30', 'p50', 'p100']);
+export const CoinPackageIdSchema = z.enum(['p10', 'p30', 'p50', 'p100']);
 export type CoinPackageId = z.infer<typeof CoinPackageIdSchema>;
 
 export const CoinPackageSchema = z.object({
@@ -35,9 +35,10 @@ export const CoinPackageSchema = z.object({
 export type CoinPackage = z.infer<typeof CoinPackageSchema>;
 
 export const COIN_PACKAGES: CoinPackage[] = [
-  { id: 'p30', label: '30 Coin', coins: 30, priceTRY: 200 },
-  { id: 'p50', label: '50 Coin', coins: 50, priceTRY: 300 },
-  { id: 'p100', label: '100 Coin', coins: 100, priceTRY: 500 },
+  { id: 'p10', label: '10 Coin', coins: 10, priceTRY: 10 },
+  { id: 'p30', label: '30 Coin', coins: 30, priceTRY: 25 },
+  { id: 'p50', label: '50 Coin', coins: 50, priceTRY: 40 },
+  { id: 'p100', label: '100 Coin', coins: 100, priceTRY: 70 },
 ];
 
 export const SubscriptionStateSchema = z.object({
