@@ -190,8 +190,8 @@ importers:
         specifier: ^3.9.1
         version: 3.10.0(react-hook-form@7.76.1(react@19.1.0))
       '@odematik/billing':
-        specifier: ^0.15.0
-        version: 0.15.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        specifier: ^0.16.0
+        version: 0.16.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@radix-ui/react-dialog':
         specifier: ^1.1.4
         version: 1.1.15(@types/react-dom@19.1.9(@types/react@19.1.17))(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -1619,8 +1619,8 @@ packages:
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
 
-  '@odematik/billing@0.15.0':
-    resolution: {integrity: sha512-lx/+4g33Uz3d7Zo2gMN9lOxxp83GJwXQoZcnsf4Sk3TXlx3j86FfKeaBqwqgzQrMBHe0WlukikQXebz6/z8ZBQ==}
+  '@odematik/billing@0.16.0':
+    resolution: {integrity: sha512-LYOXFrLNEtlcLnj5yY08pajF7VFkfzCWVThskfnKGJORepYSuKscKemvByDRCqF9Y2oKEnulO1bxZHgD+5XzWg==}
     engines: {node: '>=18'}
     peerDependencies:
       react: 19.1.0
@@ -7617,7 +7617,7 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
-  '@odematik/billing@0.15.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@odematik/billing@0.16.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
