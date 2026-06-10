@@ -1,4 +1,9 @@
-import { createOdematikHandler } from '@odematik/billing/next';
+// ödematik SDK v0.14+ mount. Plan'lar burada — kod'dan tanımlanır
+// (dashboard'a girilmesine gerek yok). SDK arka planda:
+//   • period: 'one_time'           → /charge  (tek seferlik ödeme)
+//   • period: 'monthly' | 'yearly' → /subscribe (kart token saklar, otomatik
+//                                      yenileme, iptal SDK komponentinde)
+import { createOdematikHandler, type OdematikPlan } from '@odematik/billing/next';
 import type { NextRequest } from 'next/server';
 import {
   COIN_PACKAGES,
@@ -12,65 +17,81 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Build the ödematik product catalog from our existing validator constants.
-// Plan ids get a `plan_` prefix to distinguish them from coin package ids.
-//
-// IMPORTANT: priceTRY in the catalog is the FINAL price shown to the user
-// (VAT-inclusive). The ödematik backend computes `unit_price + VAT` from
-// what we send, so we forward the pre-VAT amount and let backend re-add it.
-// This keeps the total the user pays equal to priceTRY.
+// Plan kataloğu — id (planId) → OdematikPlan.
+// priceTRY KDV DAHİL son fiyat. SDK'ya KDV hariç gönderiyoruz çünkü
+// backend item üzerine KDV'yi tekrar ekliyor; böylece kullanıcının
+// gördüğü toplam = priceTRY.
 const VAT_RATE = 20 as const;
 const preVat = (priceTRY: number) =>
-  Math.round((priceTRY / (1 + VAT_RATE / 100)) * 100) / 100; // 2-decimal precision
+  Math.round((priceTRY / (1 + VAT_RATE / 100)) * 100) / 100;
 
-const products = Object.fromEntries([
-  ...COIN_PACKAGES.map(
-    (p) => [
+const plans: Record<string, OdematikPlan> = {
+  // ─── Coin paketleri — one_time ──────────────────────────────────────────
+  ...Object.fromEntries(
+    COIN_PACKAGES.map((p) => [
       p.id,
-      { amount: preVat(p.priceTRY), currency: 'TRY' as const, name: p.label, vat_rate: VAT_RATE },
-    ] as const,
+      {
+        name:           p.label,
+        amount:         preVat(p.priceTRY),  // KDV hariç — backend KDV ekler
+        display_amount: p.priceTRY,           // KDV dahil — modal kullanıcıya bunu gösterir
+        currency: 'TRY',
+        period:   'one_time',
+        vat_rate: VAT_RATE,
+        // onPaid'e olduğu gibi gelir — purchasePackage için packageId.
+        metadata: { kind: 'coin_package', packageId: p.id, coins: p.coins },
+      } satisfies OdematikPlan,
+    ]),
   ),
-  ...SUBSCRIPTION_PLANS.map(
-    (p) =>
-      [
-        `plan_${p.id}`,
-        {
-          amount: preVat(p.priceTRY),
-          currency: 'TRY' as const,
-          name: p.label,
-          vat_rate: VAT_RATE,
-          // Real subscription: routes to backend's /subscribe endpoint and
-          // creates a subscription record (auto-renewal, dashboard visibility,
-          // customer portal). Requires matching product+plan slugs in the
-          // ödematik dashboard.
-          kind: 'subscription' as const,
-          product: 'yemek-takip',
-          plan: p.id, // 'monthly' or 'yearly'
-          billing_cycle: p.id === 'yearly' ? ('yearly' as const) : ('monthly' as const),
-        },
-      ] as const,
+  // ─── Abonelikler — monthly / yearly ─────────────────────────────────────
+  // period field'ı sayesinde SDK otomatik /subscribe'a yönlendirir,
+  // subscription kaydı oluşur, ay/yıl sonu otomatik tahsilat yapılır.
+  ...Object.fromEntries(
+    SUBSCRIPTION_PLANS.map((p) => [
+      p.id,
+      {
+        name:           p.label,
+        amount:         preVat(p.priceTRY),  // KDV hariç — backend KDV ekler
+        display_amount: p.priceTRY,           // KDV dahil — modal kullanıcıya bunu gösterir
+        currency: 'TRY',
+        period:   p.id,  // 'monthly' veya 'yearly'
+        vat_rate: VAT_RATE,
+        metadata: { kind: 'subscription', planId: p.id, durationDays: p.durationDays },
+      } satisfies OdematikPlan,
+    ]),
   ),
-]);
+};
 
 export const { GET, POST } = createOdematikHandler({
-  products,
-  // Bind every /checkout and /verify call to the signed-in user, and
-  // surface the MongoDB user id so the SDK's GET /billing route knows
-  // whose saved fatura bilgisi to fetch. Returning null → 401 (the
-  // anonymous user has no checkout session to create).
+  plans,
+  // Her /checkout, /verify, /billing, /subscriptions, /subscriptions/:id/cancel
+  // çağrısında session'dan kullanıcıyı çekiyoruz. customerId döndürmek
+  // saved billing + subscription list/cancel için ŞART.
   authenticate: async (req) => {
     const payload = await getUserFromRequest(req as NextRequest);
     if (!payload) return null;
     return { customerId: payload.userId };
   },
-  onPaid: async ({ productId, customer }) => {
+  // Ödeme doğrulandıktan sonra çalışır. SDK iki kere çağırabilir (browser
+  // /verify + webhook), bu yüzden idempotent. purchasePackage ve
+  // applySubscription kendi içlerinde duplicate-detection yapıyor.
+  onPaid: async ({ plan, customer }) => {
     if (!customer.id) throw new Error('customer.id missing from payment');
 
-    if (productId.startsWith('plan_')) {
-      const planId = productId.slice('plan_'.length) as SubscriptionPlanId;
-      await applySubscription(customer.id, planId);
+    const meta = plan.metadata as
+      | { kind: 'coin_package'; packageId: CoinPackageId }
+      | { kind: 'subscription'; planId: SubscriptionPlanId }
+      | undefined;
+
+    if (meta?.kind === 'subscription') {
+      await applySubscription(customer.id, meta.planId);
+    } else if (meta?.kind === 'coin_package') {
+      await purchasePackage(customer.id, meta.packageId);
     } else {
-      await purchasePackage(customer.id, productId as CoinPackageId);
+      // Fallback — eski webhook payload'ı plan metadata'sı olmadan gelirse
+      // period'a bakarak ayırt et. Edge case için savunma.
+      if (plan.period === 'monthly' || plan.period === 'yearly') {
+        await applySubscription(customer.id, plan.period);
+      }
     }
   },
 });

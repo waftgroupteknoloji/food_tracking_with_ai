@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { OdematikButton } from '@odematik/billing';
+import { OdematikButton, OdematikSubscriptionsList } from '@odematik/billing';
 import { api } from '@/lib/api';
 import { COIN_BALANCE_QUERY_KEY } from '@/components/coin-badge';
 import '@/components/bugun/bugun-tokens.css';
@@ -135,6 +135,25 @@ export default function CoinsPage() {
         </section>
       )}
 
+      {/* Aktif abonelikler — iptal/yönetim. Komponent kendi içinde fetch eder,
+          subscription yoksa hiçbir şey render etmez (emptyMessage da gizli
+          tutmak için kaldırılabilir, biz "Mevcut aboneliğin yok" diyoruz). */}
+      <section style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 12px' }}>
+          Aboneliklerim
+        </h3>
+        <OdematikSubscriptionsList
+          apiPath="/api/odematik"
+          cancelMode="period_end"
+          onCancelled={() => {
+            showToast('Aboneliğin dönem sonunda iptal edilecek');
+            invalidate();
+          }}
+          onError={(e) => showToast(e.message)}
+          emptyMessage="Aktif aboneliğin yok. Aşağıdan birini başlatabilirsin."
+        />
+      </section>
+
       {/* Subscription */}
       <section style={{ marginBottom: 24 }}>
         <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 12px' }}>
@@ -144,7 +163,7 @@ export default function CoinsPage() {
           {catalog.data?.plans.map((plan) => (
             <OdematikButton
               key={plan.id}
-              productId={`plan_${plan.id}`}
+              planId={plan.id}
               customer={me.data ? { id: me.data._id, email: me.data.email } : { id: '', email: '' }}
               disabled={!me.data}
               brand={{
@@ -173,7 +192,7 @@ export default function CoinsPage() {
           {catalog.data?.packages.map((pkg) => (
             <OdematikButton
               key={pkg.id}
-              productId={pkg.id}
+              planId={pkg.id}
               customer={me.data ? { id: me.data._id, email: me.data.email } : { id: '', email: '' }}
               disabled={!me.data}
               brand={{

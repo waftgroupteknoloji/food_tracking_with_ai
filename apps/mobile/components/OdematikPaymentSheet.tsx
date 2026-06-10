@@ -89,6 +89,7 @@ export function OdematikPaymentSheet({
   const [savedBilling, setSavedBilling] = useState<OdematikBillingInfo | null>(null);
   const [savedBillingLoading, setSavedBillingLoading] = useState(false);
   const [billingMode, setBillingMode] = useState<'first-time' | 'override'>('first-time');
+  const [couponCode, setCouponCode] = useState('');
   const [billingForm, setBillingForm] = useState<OdematikBillingInfo>({
     unvan: '',
     vkn_tckn: '',
@@ -117,6 +118,7 @@ export function OdematikPaymentSheet({
       il: '',
       ilce: '',
     });
+    setCouponCode('');
     verifiedRef.current = false;
   }, []);
 
@@ -190,7 +192,12 @@ export function OdematikPaymentSheet({
         const customerForRequest = extraBilling
           ? { ...customer, billing: extraBilling }
           : customer;
-        const res = await odematikCheckout(product.productId, customerForRequest);
+        const trimmedCoupon = couponCode.trim();
+        const res = await odematikCheckout(
+          product.productId,
+          customerForRequest,
+          trimmedCoupon || undefined,
+        );
         if (!res.ok) {
           if (res.error?.code === 'billing_required') {
             setBillingMode('first-time');
@@ -239,7 +246,7 @@ export function OdematikPaymentSheet({
         setLoading(false);
       }
     },
-    [customer, onClose, onError, onPaid, product, reset],
+    [couponCode, customer, onClose, onError, onPaid, product, reset],
   );
 
   const handleEditBilling = useCallback(() => {
@@ -388,6 +395,8 @@ export function OdematikPaymentSheet({
             savedBillingLoading={savedBillingLoading}
             onEditBilling={handleEditBilling}
             onProceed={() => startCheckout()}
+            couponCode={couponCode}
+            onCouponChange={setCouponCode}
           />
         )}
 
@@ -469,6 +478,8 @@ function PreviewStage({
   savedBillingLoading,
   onEditBilling,
   onProceed,
+  couponCode,
+  onCouponChange,
 }: {
   product: ProductSummary;
   accent: string;
@@ -478,6 +489,8 @@ function PreviewStage({
   savedBillingLoading: boolean;
   onEditBilling: () => void;
   onProceed: () => void;
+  couponCode: string;
+  onCouponChange: (code: string) => void;
 }) {
   return (
     <ScrollView
@@ -515,6 +528,41 @@ function PreviewStage({
             {product.summary}
           </Text>
         )}
+      </View>
+
+      <View>
+        <Text
+          style={{
+            color: C.text3,
+            fontSize: 11,
+            fontWeight: '500',
+            textTransform: 'uppercase',
+            letterSpacing: 0.6,
+            marginBottom: 6,
+          }}
+        >
+          İndirim kodu (opsiyonel)
+        </Text>
+        <TextInput
+          value={couponCode}
+          onChangeText={onCouponChange}
+          placeholder="Kupon kodun varsa gir"
+          placeholderTextColor={C.text4}
+          editable={!busy}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: 9,
+            borderWidth: 1,
+            borderColor: C.border,
+            backgroundColor: C.surface2,
+            color: C.text,
+            fontSize: 14,
+            letterSpacing: 1,
+          }}
+        />
       </View>
 
       {savedBillingLoading ? (
