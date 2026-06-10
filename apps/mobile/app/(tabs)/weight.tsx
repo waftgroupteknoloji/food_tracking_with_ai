@@ -13,7 +13,7 @@ import {
   type GestureResponderEvent,
   type LayoutChangeEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, {
@@ -148,10 +148,11 @@ export default function WeightScreen() {
 
   const heroPoints = useMemo(() => all.slice(-30), [all]);
   const reversed = useMemo(() => [...all].reverse(), [all]);
+  const insets = useSafeAreaInsets();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
-      <View style={{ position: 'absolute', top: 12, right: 16, zIndex: 10 }}>
+      <View style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 10 }}>
         <CoinBadge />
       </View>
       <ScrollView

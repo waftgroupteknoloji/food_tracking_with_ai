@@ -1,5 +1,5 @@
 import { View, Text, Pressable, ScrollView, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
@@ -53,11 +53,12 @@ export default function ProfileScreen() {
   const current = allWeights[allWeights.length - 1]?.weightKg;
   const lostKg = start && current ? +(start - current).toFixed(1) : null;
   const bmi = current && heightCm ? calculateBMI(current, heightCm) : null;
+  const insets = useSafeAreaInsets();
   const age = birthDate ? ageFromBirthDate(birthDate) : null;
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950" edges={['top']}>
-      <View style={{ position: 'absolute', top: 12, right: 16, zIndex: 10 }}>
+      <View style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 10 }}>
         <CoinBadge />
       </View>
       <ScrollView contentContainerClassName="pb-28">
