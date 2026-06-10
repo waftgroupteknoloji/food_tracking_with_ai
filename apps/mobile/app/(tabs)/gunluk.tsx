@@ -9,6 +9,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -250,6 +251,7 @@ export default function GunlukScreen() {
   }, [days, filter]);
 
   const isRefreshing = queries.some((q) => q.isFetching);
+  const isInitialLoading = queries.every((q) => !q.data) && queries.some((q) => q.isLoading);
 
   const toggle = (iso: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -260,6 +262,17 @@ export default function GunlukScreen() {
       return next;
     });
   };
+
+  if (isInitialLoading) {
+    return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}
+        edges={['top']}
+      >
+        <ActivityIndicator size="large" color={C.lime} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>

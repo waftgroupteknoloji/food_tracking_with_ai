@@ -4,17 +4,14 @@ import {
   Text,
   ScrollView,
   Pressable,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
-import { showRewardedAd } from '@/lib/ads';
-import { ApiError } from '@yemek-takip/api-client';
 import type {
   CoinPackage,
   CoinPackageId,
@@ -36,7 +33,6 @@ export default function CoinsScreen() {
   const qc = useQueryClient();
   const refreshMe = useAuthStore((s) => s.refreshMe);
   const me = useAuthStore((s) => s.user);
-  const [watchingAd, setWatchingAd] = useState(false);
   const [paymentProduct, setPaymentProduct] = useState<ProductSummary | null>(null);
 
   const balance = useQuery({
@@ -105,28 +101,6 @@ export default function CoinsScreen() {
     invalidate();
   };
 
-  const adReward = useMutation({
-    mutationFn: (nonce: string) => api.coins.adReward(nonce, 'mobile'),
-    onSuccess: (data) => {
-      Alert.alert('Tebrikler 🪙', `+${data.awarded} coin kazandın!`);
-      invalidate();
-    },
-    onError: (err) =>
-      Alert.alert('Hata', err instanceof ApiError ? err.message : 'Bir hata oluştu'),
-  });
-
-  const handleWatchAd = async () => {
-    setWatchingAd(true);
-    try {
-      const result = await showRewardedAd();
-      adReward.mutate(result.adNonce);
-    } catch (e) {
-      Alert.alert('Reklam yüklenemedi', e instanceof Error ? e.message : 'Tekrar dene');
-    } finally {
-      setWatchingAd(false);
-    }
-  };
-
   const coins = balance.data?.coins ?? 0;
   const hasActiveSub = balance.data?.hasActiveSubscription ?? false;
   const subExpiry = balance.data?.subscription?.expiresAt;
@@ -176,40 +150,31 @@ export default function CoinsScreen() {
             )}
           </View>
 
-          {/* Ad reward */}
+          {/* Ad reward — yakında (reklam entegrasyonu henüz aktif değil) */}
           {!hasActiveSub && (
             <View>
               <Text style={styles.h3}>Reklam izle, coin kazan</Text>
-              <Pressable
-                onPress={handleWatchAd}
-                disabled={watchingAd || adReward.isPending}
+              <View
                 style={{
                   paddingVertical: 14,
                   borderRadius: 12,
-                  backgroundColor: C.lime,
+                  backgroundColor: C.surface2,
+                  borderWidth: 1,
+                  borderColor: C.border,
                   alignItems: 'center',
-                  opacity: watchingAd || adReward.isPending ? 0.6 : 1,
                   flexDirection: 'row',
                   justifyContent: 'center',
                   gap: 8,
+                  opacity: 0.7,
                 }}
               >
-                {watchingAd ? (
-                  <>
-                    <ActivityIndicator color="#000" />
-                    <Text style={{ color: '#000', fontWeight: '700' }}>Reklam oynatılıyor…</Text>
-                  </>
-                ) : (
-                  <>
-                    <Ionicons name="play-circle" size={20} color="#000" />
-                    <Text style={{ color: '#000', fontWeight: '700' }}>
-                      Reklam izle (+1 coin)
-                    </Text>
-                  </>
-                )}
-              </Pressable>
+                <Ionicons name="time-outline" size={20} color={C.text3} />
+                <Text style={{ color: C.text3, fontWeight: '700' }}>
+                  Reklam izle (+1 coin) · Yakında
+                </Text>
+              </View>
               <Text style={{ color: C.text3, fontSize: 11.5, marginTop: 6 }}>
-                Reklamlar arası 30 sn bekleme · günlük en fazla 30 reklam
+                Reklam ile coin kazanma özelliği çok yakında eklenecek.
               </Text>
             </View>
           )}

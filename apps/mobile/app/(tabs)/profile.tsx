@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ScrollView, Dimensions } from 'react-native';
+import { View, Text, Pressable, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -55,6 +55,19 @@ export default function ProfileScreen() {
   const bmi = current && heightCm ? calculateBMI(current, heightCm) : null;
   const insets = useSafeAreaInsets();
   const age = birthDate ? ageFromBirthDate(birthDate) : null;
+
+  const isInitialLoading = streak.isLoading || weightAll.isLoading || meals.isLoading;
+
+  if (isInitialLoading) {
+    return (
+      <SafeAreaView
+        className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center"
+        edges={['top']}
+      >
+        <ActivityIndicator size="large" color="#16a34a" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950" edges={['top']}>
