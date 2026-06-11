@@ -44,7 +44,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "https://diyet-kappa.vercel.app",
+      "apiUrl": "https://kackal.com",
       "router": {},
       "eas": {
         "projectId": "b92453d7-0466-463c-b778-f32cf40905fd"
