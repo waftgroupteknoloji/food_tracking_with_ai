@@ -83,7 +83,7 @@ export default function CoinsScreen() {
     const plan = catalog.data?.plans.find((p: SubscriptionPlan) => p.id === id);
     if (!plan) return;
     openPaymentSheet({
-      productId: `plan_${plan.id}`,
+      productId: plan.id,
       label: plan.label,
       priceTRY: plan.priceTRY,
       summary: `${plan.label} · ${plan.priceTRY} ₺`,
@@ -94,7 +94,7 @@ export default function CoinsScreen() {
   const handlePaid = () => {
     Alert.alert(
       '✓ Ödeme başarılı',
-      paymentProduct?.productId.startsWith('plan_')
+      paymentProduct?.productId === 'monthly' || paymentProduct?.productId === 'yearly'
         ? 'Üyeliğin aktifleştirildi.'
         : 'Coin paketin hesabına eklendi.',
     );
