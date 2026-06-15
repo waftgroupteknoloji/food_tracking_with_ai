@@ -10,7 +10,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import * as SecureStore from 'expo-secure-store';
+import { OdematikPaymentSheet } from '@odematik/billing/native';
+import { api, API_BASE_URL } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import type {
   CoinPackage,
@@ -21,10 +23,6 @@ import type {
 } from '@yemek-takip/validators';
 import { C } from '@/lib/theme';
 import { COIN_BALANCE_QUERY_KEY } from '@/components/coin-badge';
-import {
-  OdematikPaymentSheet,
-  type ProductSummary,
-} from '@/components/OdematikPaymentSheet';
 
 const COINS_HISTORY_KEY = ['coins', 'transactions'] as const;
 
@@ -33,7 +31,10 @@ export default function CoinsScreen() {
   const qc = useQueryClient();
   const refreshMe = useAuthStore((s) => s.refreshMe);
   const me = useAuthStore((s) => s.user);
-  const [paymentProduct, setPaymentProduct] = useState<ProductSummary | null>(null);
+  // Ödeme akışı tamamen @odematik/billing/native içindeki OdematikPaymentSheet
+  // tarafından yönetilir — burada sadece hangi planId ödeniyor onu tutuyoruz.
+  const [payingPlanId, setPayingPlanId] = useState<string | null>(null);
+  const [payingAccent, setPayingAccent] = useState<string | undefined>(undefined);
 
   const balance = useQuery({
     queryKey: COIN_BALANCE_QUERY_KEY,
@@ -63,38 +64,28 @@ export default function CoinsScreen() {
     return true;
   };
 
-  const openPaymentSheet = (product: ProductSummary) => {
+  const openPayment = (planId: string, accent?: string) => {
     if (!requireLogin()) return;
-    setPaymentProduct(product);
+    setPayingAccent(accent);
+    setPayingPlanId(planId);
   };
 
   const handlePurchase = (id: CoinPackageId) => {
     const pkg = catalog.data?.packages.find((p: CoinPackage) => p.id === id);
     if (!pkg) return;
-    openPaymentSheet({
-      productId: pkg.id,
-      label: `${pkg.coins} Coin`,
-      priceTRY: pkg.priceTRY,
-      summary: `${pkg.coins} Coin · ${pkg.priceTRY} ₺`,
-    });
+    openPayment(pkg.id);
   };
 
   const handleSubscribe = (id: SubscriptionPlanId) => {
     const plan = catalog.data?.plans.find((p: SubscriptionPlan) => p.id === id);
     if (!plan) return;
-    openPaymentSheet({
-      productId: plan.id,
-      label: plan.label,
-      priceTRY: plan.priceTRY,
-      summary: `${plan.label} · ${plan.priceTRY} ₺`,
-      accent: plan.id === 'yearly' ? '#d4a949' : '#6366F1',
-    });
+    openPayment(plan.id, plan.id === 'yearly' ? '#d4a949' : undefined);
   };
 
   const handlePaid = () => {
     Alert.alert(
       '✓ Ödeme başarılı',
-      paymentProduct?.productId === 'monthly' || paymentProduct?.productId === 'yearly'
+      payingPlanId === 'monthly' || payingPlanId === 'yearly'
         ? 'Üyeliğin aktifleştirildi.'
         : 'Coin paketin hesabına eklendi.',
     );
@@ -309,15 +300,18 @@ export default function CoinsScreen() {
         </ScrollView>
       </SafeAreaView>
       <OdematikPaymentSheet
-        visible={!!paymentProduct}
-        product={paymentProduct}
+        visible={!!payingPlanId}
+        planId={payingPlanId}
         customer={{
           id: me?._id ?? '',
           email: me?.email ?? '',
         }}
-        onClose={() => setPaymentProduct(null)}
+        apiBaseUrl={API_BASE_URL}
+        getAuthToken={() => SecureStore.getItemAsync('auth_access')}
+        brand={{ name: 'Yemek Takip', accent: payingAccent }}
+        onClose={() => setPayingPlanId(null)}
         onPaid={handlePaid}
-        onError={(err) => Alert.alert('Ödeme hatası', err.message)}
+        onError={(err: Error) => Alert.alert('Ödeme hatası', err.message)}
       />
     </>
   );
