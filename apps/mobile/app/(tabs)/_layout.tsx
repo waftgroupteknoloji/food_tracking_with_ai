@@ -3,6 +3,7 @@ import { Pressable, Text, View, Platform } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/lib/auth-store';
+import { isProfileComplete } from '@/lib/profile';
 import { Ionicons } from '@expo/vector-icons';
 import { C, onPrimary } from '@/lib/theme';
 
@@ -131,8 +132,10 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 
 export default function TabsLayout() {
   const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   if (status === 'unauthed') return <Redirect href="/(auth)/login" />;
   if (status === 'idle' || status === 'loading') return null;
+  if (!isProfileComplete(user)) return <Redirect href="/onboarding" />;
 
   return (
     <Tabs
