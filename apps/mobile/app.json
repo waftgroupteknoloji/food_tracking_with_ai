@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yemektakip.app",
+      "bundleIdentifier": "com.kackal",
       "icon": "./assets/icon.png"
     },
     "android": {
@@ -23,7 +23,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#16a34a"
       },
-      "package": "com.yemektakip.app",
+      "package": "com.kackal",
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ]
